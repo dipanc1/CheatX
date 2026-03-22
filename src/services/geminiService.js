@@ -4,7 +4,8 @@ class GeminiService {
   constructor(apiKey) {
     this.apiKey = apiKey;
     this.client = new GoogleGenerativeAI(apiKey);
-    this.model = this.client.getGenerativeModel({ model: 'gemini-pro' });
+    // Use gemini-1.5-flash (free tier, fast, reliable)
+    this.model = this.client.getGenerativeModel({ model: 'gemini-3-flash-preview' });
   }
 
   async classifyQuestion(question) {
@@ -18,17 +19,17 @@ Respond with ONLY the category name.`;
     return result.response.text().trim().toLowerCase();
   }
 
-  async generateHints(question, category = 'auto') {
+  async generateHints(question, category = 'auto', resume = '', jobDesc = '') {
     let classifiedCategory = category;
     if (category === 'auto') {
       classifiedCategory = await this.classifyQuestion(question);
     }
 
     const prompts = {
-      coding: this.getCodingPrompt(question),
-      lld: this.getLLDPrompt(question),
-      hld: this.getHLDPrompt(question),
-      behavioral: this.getBehavioralPrompt(question),
+      coding: this.getCodingPrompt(question, resume, jobDesc),
+      lld: this.getLLDPrompt(question, resume, jobDesc),
+      hld: this.getHLDPrompt(question, resume, jobDesc),
+      behavioral: this.getBehavioralPrompt(question, resume, jobDesc),
     };
 
     const prompt = prompts[classifiedCategory] || prompts.coding;
@@ -39,9 +40,14 @@ Respond with ONLY the category name.`;
     };
   }
 
-  getCodingPrompt(question) {
-    return `You are a Google interview coach. A candidate is being asked this coding question during their interview. They will repeat your answer to the interviewer.
-
+  getCodingPrompt(question, resume = '', jobDesc = '') {
+    let context = '';
+    if (resume || jobDesc) {
+      context = `\n\nCANDIDATE CONTEXT:\n`;
+      if (resume) context += `Resume highlights: ${resume.substring(0, 300)}\n`;
+      if (jobDesc) context += `Target role: ${jobDesc.substring(0, 300)}\n`;
+    }
+    return `You are a Google interview coach. A candidate is being asked this coding question during their interview. They will repeat your answer to the interviewer.${context}
 IMPORTANT: Your answer must be CONCISE, CLEAR, and directly REPEATABLE in an interview. Skip explanations - just give the approach + code.
 
 Question: "${question}"
@@ -50,15 +56,20 @@ Format your response as:
 1. Problem Type (e.g., "Graph BFS", "DP", "Two Pointers")
 2. Approach (2-3 sentences max)
 3. Edge Cases to mention
-4. Clean, working code (${question.length < 100 ? 'Python' : 'language choice'})
+4. Clean, working code (Java)
 5. Time & Space Complexity
 
 Remember: Keep it SHORT. They need to say this in the interview!`;
   }
 
   getLLDPrompt(question) {
-    return `You are a Google interview coach. A candidate is being asked this Low Level Design (LLD) question.
-
+    let context = '';
+    if (resume || jobDesc) {
+      context = `\n\nCANDIDATE CONTEXT:\n`;
+      if (resume) context += `Background: ${resume.substring(0, 300)}\n`;
+      if (jobDesc) context += `Target role: ${jobDesc.substring(0, 300)}\n`;
+    }
+    return `You are a Google interview coach. A candidate is being asked this Low Level Design (LLD) question.${context}
 IMPORTANT: Your answer must be CONCISE and directly expressible in 2-3 minutes.
 
 Question: "${question}"
@@ -68,14 +79,19 @@ Format:
 2. Key Design Patterns (if any)
 3. Essential Methods (what the interviewer will probe)
 4. Trade-offs (1-2 important ones)
-5. One simple Python/Java interface skeleton
+5. One simple Java interface skeleton
 
 Keep it SHORT and actionable!`;
   }
 
-  getHLDPrompt(question) {
-    return `You are a Google infrastructure coach. A candidate is being asked this High Level Design (HLD) question.
-
+  getHLDPrompt(question, resume = '', jobDesc = '') {
+    let context = '';
+    if (resume || jobDesc) {
+      context = `\n\nCANDIDATE CONTEXT:\n`;
+      if (resume) context += `Experience: ${resume.substring(0, 300)}\n`;
+      if (jobDesc) context += `Target role: ${jobDesc.substring(0, 300)}\n`;
+    }
+    return `You are a Google infrastructure coach. A candidate is being asked this High Level Design (HLD) question.${context}
 IMPORTANT: Give a SHORT, reproducible answer that can be sketched in 10-15 minutes.
 
 Question: "${question}"
@@ -90,8 +106,12 @@ Format:
 Draw simple ASCII diagram if helpful. Keep it SHORT!`;
   }
 
-  getBehavioralPrompt(question) {
-    return `You are a Google behavioral interviewer coach. A candidate needs to answer this behavioral question.
+  getBehavioralPrompt(question, resume = '', jobDesc = '') {
+    let context = '';
+    if (resume) {
+      context = `\n\nCANDIDATE RESUME:\n${resume.substring(0, 400)}\nBuild answers from their specific achievements and background.`;
+    }
+    return `You are a Google behavioral interviewer coach. A candidate needs to answer this behavioral question.${context}
 
 IMPORTANT: Your answer should follow STAR format and be repeatable in 2 minutes.
 

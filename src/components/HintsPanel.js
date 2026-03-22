@@ -3,6 +3,10 @@ import React from 'react';
 function HintsPanel({ hints, loading, stealthMode, setStealthMode, onCopy }) {
   return (
     <div className="hints-panel" style={{ display: stealthMode ? 'none' : 'flex' }}>
+      <div style={{ fontSize: '11px', color: '#666', marginBottom: '10px' }}>
+        ⌨️ Shortcuts: Ctrl+Shift+H to hide | Ctrl+Shift+C to copy
+      </div>
+
       <div className="stealth-toggle">
         <input
           type="checkbox"

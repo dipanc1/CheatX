@@ -1,5 +1,8 @@
 class QuestionClassifier {
   static classify(question) {
+    if (!question || typeof question !== 'string') {
+      return 'coding'; // default
+    }
     const q = question.toLowerCase();
 
     // Coding indicators

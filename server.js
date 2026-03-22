@@ -20,20 +20,25 @@ const db = new Database();
 // Routes
 app.post('/api/hints', async (req, res) => {
   try {
-    const { question, category } = req.body;
+    const { question, category, resume = '', jobDesc = '' } = req.body;
 
-    if (!question) {
-      return res.status(400).json({ error: 'Question is required' });
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({ error: 'Question must be a non-empty string' });
+    }
+
+    const questionStr = question.trim();
+    if (!questionStr) {
+      return res.status(400).json({ error: 'Question cannot be empty' });
     }
 
     // Classify question if needed
     let classifiedCategory = category;
     if (!category || category === 'auto') {
-      classifiedCategory = QuestionClassifier.classify(question);
+      classifiedCategory = QuestionClassifier.classify(questionStr);
     }
 
-    // Generate hints using Gemini
-    const hints = await geminiService.generateHints(question, classifiedCategory);
+    // Generate hints using Gemini with context
+    const hints = await geminiService.generateHints(questionStr, classifiedCategory, resume, jobDesc);
 
     // Parse hints into structured format
     const parsedHints = parseHints(hints.response, classifiedCategory);
@@ -78,7 +83,6 @@ app.get('/health', (req, res) => {
 
 // Helper function to parse hints
 function parseHints(response, category) {
-  const lines = response.split('\n');
   const result = {
     approach: '',
     keyPoints: '',
@@ -86,53 +90,38 @@ function parseHints(response, category) {
     codeSnippet: '',
   };
 
-  let currentSection = '';
-  let buffer = '';
-
-  for (const line of lines) {
-    if (
-      line.includes('Approach') ||
-      line.includes('approach') ||
-      line.includes('Strategy')
-    ) {
-      currentSection = 'approach';
-    } else if (
-      line.includes('Key Point') ||
-      line.includes('key point') ||
-      line.includes('Important')
-    ) {
-      currentSection = 'keyPoints';
-    } else if (
-      line.includes('Edge Case') ||
-      line.includes('edge case') ||
-      line.includes('Corner')
-    ) {
-      currentSection = 'edgeCases';
-    } else if (line.includes('Code') || line.includes('code')) {
-      currentSection = 'codeSnippet';
-    } else if (currentSection && line.trim()) {
-      if (currentSection === 'codeSnippet' && line.includes('```')) {
-        buffer += line + '\n';
-      } else if (currentSection === 'codeSnippet') {
-        buffer += line + '\n';
-      } else {
-        buffer += line + ' ';
-      }
-    } else if (!line.trim() && buffer) {
-      result[currentSection] = buffer.trim();
-      buffer = '';
-      currentSection = '';
-    }
+  // Extract code snippet (between ``` markers or after "Code" section)
+  const codeMatch = response.match(/```[a-z]*\n([\s\S]*?)```/g);
+  if (codeMatch && codeMatch[0]) {
+    // Clean up: remove ``` markers and language tag
+    result.codeSnippet = codeMatch[0]
+      .replace(/```[a-z]*\n?/g, '') // Remove opening ```java or similar
+      .replace(/```/g, '') // Remove closing ```
+      .trim();
   }
 
-  if (buffer) {
-    result[currentSection] = buffer.trim();
+  // Extract approach
+  const approachMatch = response.match(/(?:Approach|approach|Strategy)[:\s]+([^\n]+(?:\n(?![0-9.])[^\n]+)*)/i);
+  if (approachMatch) {
+    result.approach = approachMatch[1].trim().substring(0, 300);
+  }
+
+  // Extract edge cases
+  const edgeCaseMatch = response.match(/(?:Edge Case|edge case|Corner)[:\s]+([^\n]+(?:\n(?![0-9.])[^\n]+)*)/i);
+  if (edgeCaseMatch) {
+    result.edgeCases = edgeCaseMatch[1].trim().substring(0, 300);
   }
 
   return result;
 }
 
 app.listen(PORT, () => {
+  if (!process.env.GEMINI_API_KEY) {
+    console.warn('❌ WARNING: GEMINI_API_KEY not set in .env file');
+    console.warn('   Get one from: https://makersuite.google.com/app/apikey');
+  } else {
+    console.log('✅ Gemini API key configured');
+  }
   console.log(`Backend running on http://localhost:${PORT}`);
 });
 
