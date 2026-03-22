@@ -1,6 +1,6 @@
-# Interview Copilot 🚀
+# CheatX 🚀
 
-A real-time interview assistant that helps you ace Google-level interviews. Get instant hints during coding, LLD, HLD, and behavioral rounds.
+A real-time interview assistant that helps you ace interviews at any company. Get instant hints during coding, LLD, HLD, and behavioral rounds.
 
 ## Features
 
@@ -11,12 +11,13 @@ A real-time interview assistant that helps you ace Google-level interviews. Get 
 ✅ **Stealth Mode** - Hide panel during screen share
 ✅ **Offline Capable** - SQLite local storage
 ✅ **Interview History** - Track your practice
+✅ **Dual LLM Support** - Gemini (primary) + Groq (fallback)
 
 ## Tech Stack
 
 - **Frontend:** Electron + React
 - **Backend:** Node.js + Express
-- **LLM:** Google Gemini API
+- **LLM:** Google Gemini API (primary) + Groq (fallback)
 - **Database:** SQLite
 - **Real-time:** WebSocket ready
 
@@ -26,6 +27,7 @@ A real-time interview assistant that helps you ace Google-level interviews. Get 
 - Node.js 16+
 - npm or yarn
 - Gemini API Key (free from [Google AI Studio](https://makersuite.google.com/app/apikey))
+- Groq API Key (free from [Groq Console](https://console.groq.com))
 
 ### Setup
 

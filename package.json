@@ -1,7 +1,7 @@
 {
-  "name": "interview-copilot",
+  "name": "cheatx",
   "version": "1.0.0",
-  "description": "Real-time interview copilot for Google prep - Coding, LLD, HLD, Behavioral",
+  "description": "CheatX - Real-time interview copilot for all companies - Coding, LLD, HLD, Behavioral",
   "main": "electron/main.js",
   "homepage": "./",
   "scripts": {
@@ -36,8 +36,8 @@
     "wait-on": "^7.0.1"
   },
   "build": {
-    "appId": "com.interview.copilot",
-    "productName": "Interview Copilot",
+    "appId": "com.cheatx.app",
+    "productName": "CheatX",
     "files": [
       "build/**/*",
       "electron/**/*",

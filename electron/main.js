@@ -16,6 +16,8 @@ function createWindow() {
     },
   });
 
+  mainWindow.setTitle('CheatX - Interview Copilot');
+
   const startUrl = isDev
     ? 'http://localhost:3000'
     : `file://${path.join(__dirname, '../build/index.html')}`;

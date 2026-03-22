@@ -89,7 +89,7 @@ function App() {
       <div className="main-panel">
         <div className="header">
           <span style={{ fontSize: '24px' }}>⚡</span>
-          <h1>Interview Copilot</h1>
+          <h1>CheatX</h1>
         </div>
 
         <ContextUpload

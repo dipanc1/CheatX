@@ -115,13 +115,22 @@ function parseHints(response, category) {
 }
 
 app.listen(PORT, () => {
-  if (!process.env.GEMINI_API_KEY) {
-    console.warn('❌ WARNING: GEMINI_API_KEY not set in .env file');
-    console.warn('   Get one from: https://makersuite.google.com/app/apikey');
-  } else {
-    console.log('✅ Gemini API key configured');
+  console.log('\n🚀 CheatX Backend Starting...\n');
+  
+  const geminiKey = process.env.GEMINI_API_KEY ? '✅ Configured' : '❌ Missing';
+  const groqKey = process.env.GROQ_API_KEY ? '✅ Configured' : '❌ Missing';
+  
+  console.log(`📌 LLM Configuration:`);
+  console.log(`   Gemini (Primary):  ${geminiKey}`);
+  console.log(`   Groq (Fallback):   ${groqKey}`);
+  
+  if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY) {
+    console.warn('\n⚠️  WARNING: No LLM keys configured!');
+    console.warn('   Get Gemini key from: https://makersuite.google.com/app/apikey');
+    console.warn('   Get Groq key from: https://console.groq.com\n');
   }
-  console.log(`Backend running on http://localhost:${PORT}`);
+  
+  console.log(`✨ Backend running on http://localhost:${PORT}\n`);
 });
 
 // Graceful shutdown
