@@ -9,13 +9,13 @@ class LLMService {
     // Initialize Gemini
     if (geminiKey) {
       this.geminiClient = new GoogleGenerativeAI(geminiKey);
-      this.geminiModel = this.geminiClient.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      this.geminiModel = this.geminiClient.getGenerativeModel({ model: 'gemini-3-flash-preview' });
     }
     
-    // Initialize Groq as fallback
+    // Initialize Groq
     if (groqKey) {
       this.groqClient = new Groq({ apiKey: groqKey });
-      this.groqModel = 'mixtral-8x7b-32768';
+      this.groqModel = 'openai/gpt-oss-20b';
     }
   }
 
@@ -37,12 +37,12 @@ Respond with ONLY the category name.`;
 
     // Fallback to Groq
     if (this.groqClient) {
-      const message = await this.groqClient.messages.create({
+      const message = await this.groqClient.chat.completions.create({
         model: this.groqModel,
         max_tokens: 100,
         messages: [{ role: 'user', content: prompt }],
       });
-      return message.content[0].text.trim().toLowerCase();
+      return message.choices[0]?.message?.content.trim().toLowerCase();
     }
 
     throw new Error('No LLM provider available');
@@ -77,14 +77,14 @@ Respond with ONLY the category name.`;
 
     // Fallback to Groq
     if (this.groqClient) {
-      const message = await this.groqClient.messages.create({
+      const message = await this.groqClient.chat.completions.create({
         model: this.groqModel,
         max_tokens: 2000,
         messages: [{ role: 'user', content: prompt }],
       });
       return {
         classification: classifiedCategory,
-        response: message.content[0].text,
+        response: message.choices[0]?.message?.content || '',
       };
     }
 
