@@ -1,0 +1,219 @@
+.app-container {
+  display: flex;
+  height: 100vh;
+  background: #0f0f1e;
+  color: #e0e0e0;
+}
+
+.main-panel {
+  flex: 1;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.hints-panel {
+  width: 350px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 20px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-size: 24px;
+  color: #00d4ff;
+  font-weight: 600;
+}
+
+.question-input {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.question-input label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.question-input textarea {
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  resize: vertical;
+  min-height: 150px;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.question-input textarea:focus {
+  border-color: #00d4ff;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+}
+
+.category-selector {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.category-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.category-btn.active {
+  background: #00d4ff;
+  color: #0f0f1e;
+  border-color: #00d4ff;
+}
+
+.category-btn:hover {
+  border-color: #00d4ff;
+}
+
+.btn-generate {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  border: none;
+  border-radius: 6px;
+  color: #0f0f1e;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-generate:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 212, 255, 0.4);
+}
+
+.btn-generate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hints-section h2 {
+  font-size: 14px;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+  padding-bottom: 8px;
+}
+
+.hint-card {
+  background: rgba(0, 212, 255, 0.05);
+  border-left: 3px solid #00d4ff;
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.hint-card code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  color: #00ff88;
+}
+
+.copy-btn {
+  padding: 6px 12px;
+  background: rgba(0, 212, 255, 0.2);
+  border: 1px solid rgba(0, 212, 255, 0.5);
+  color: #00d4ff;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.copy-btn:hover {
+  background: rgba(0, 212, 255, 0.4);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #00d4ff;
+  font-size: 14px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 212, 255, 0.3);
+  border-top: 2px solid #00d4ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error {
+  background: rgba(255, 0, 0, 0.1);
+  border-left: 3px solid #ff3333;
+  padding: 12px;
+  border-radius: 4px;
+  color: #ff6666;
+  font-size: 13px;
+}
+
+.stealth-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.stealth-toggle input {
+  cursor: pointer;
+}

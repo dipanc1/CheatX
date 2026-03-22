@@ -1,0 +1,11 @@
+node_modules/
+build/
+dist/
+.env
+.env.local
+interview_history.db
+*.log
+.DS_Store
+.vscode
+.idea
+out/
