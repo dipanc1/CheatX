@@ -46,12 +46,14 @@ function App() {
     setHints(null);
 
     try {
-      const response = await window.electron.getHints({
+      const hintData = {
         question,
         category,
-        resume: resume.substring(0, 2000), // Limit to first 2000 chars
-        jobDesc: jobDesc.substring(0, 2000), // Limit to first 2000 chars
-      });
+        resume: resume || '',
+        jobDesc: jobDesc || '',
+      };
+      
+      const response = await window.electron.getHints(hintData);
 
       if (response.error) {
         setError(response.error);

@@ -11,7 +11,7 @@ const PORT = process.env.BACKEND_PORT || 5000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // Initialize services
 const geminiService = new GeminiService(process.env.GEMINI_API_KEY);
@@ -21,7 +21,6 @@ const db = new Database();
 app.post('/api/hints', async (req, res) => {
   try {
     const { question, category, resume = '', jobDesc = '' } = req.body;
-
     if (!question || typeof question !== 'string') {
       return res.status(400).json({ error: 'Question must be a non-empty string' });
     }

@@ -44,10 +44,10 @@ Respond with ONLY the category name.`;
     let context = '';
     if (resume || jobDesc) {
       context = `\n\nCANDIDATE CONTEXT:\n`;
-      if (resume) context += `Resume highlights: ${resume.substring(0, 300)}\n`;
-      if (jobDesc) context += `Target role: ${jobDesc.substring(0, 300)}\n`;
+      if (resume) context += `Resume: ${resume}\n`;
+      if (jobDesc) context += `Target role: ${jobDesc}\n`;
     }
-    return `You are a Google interview coach. A candidate is being asked this coding question during their interview. They will repeat your answer to the interviewer.${context}
+    return `You are an interview coach. A candidate is being asked this coding question during their interview. They will repeat your answer to the interviewer.${context}
 IMPORTANT: Your answer must be CONCISE, CLEAR, and directly REPEATABLE in an interview. Skip explanations - just give the approach + code.
 
 Question: "${question}"
@@ -62,12 +62,12 @@ Format your response as:
 Remember: Keep it SHORT. They need to say this in the interview!`;
   }
 
-  getLLDPrompt(question) {
+  getLLDPrompt(question, resume = '', jobDesc = '') {
     let context = '';
     if (resume || jobDesc) {
       context = `\n\nCANDIDATE CONTEXT:\n`;
-      if (resume) context += `Background: ${resume.substring(0, 300)}\n`;
-      if (jobDesc) context += `Target role: ${jobDesc.substring(0, 300)}\n`;
+      if (resume) context += `Background: ${resume}\n`;
+      if (jobDesc) context += `Target role: ${jobDesc}\n`;
     }
     return `You are a Google interview coach. A candidate is being asked this Low Level Design (LLD) question.${context}
 IMPORTANT: Your answer must be CONCISE and directly expressible in 2-3 minutes.
@@ -88,10 +88,10 @@ Keep it SHORT and actionable!`;
     let context = '';
     if (resume || jobDesc) {
       context = `\n\nCANDIDATE CONTEXT:\n`;
-      if (resume) context += `Experience: ${resume.substring(0, 300)}\n`;
-      if (jobDesc) context += `Target role: ${jobDesc.substring(0, 300)}\n`;
+      if (resume) context += `Experience: ${resume}\n`;
+      if (jobDesc) context += `Target role: ${jobDesc}\n`;
     }
-    return `You are a Google infrastructure coach. A candidate is being asked this High Level Design (HLD) question.${context}
+    return `You are a system design interview coach. A candidate is being asked this High Level Design (HLD) question.${context}
 IMPORTANT: Give a SHORT, reproducible answer that can be sketched in 10-15 minutes.
 
 Question: "${question}"
@@ -109,9 +109,9 @@ Draw simple ASCII diagram if helpful. Keep it SHORT!`;
   getBehavioralPrompt(question, resume = '', jobDesc = '') {
     let context = '';
     if (resume) {
-      context = `\n\nCANDIDATE RESUME:\n${resume.substring(0, 400)}\nBuild answers from their specific achievements and background.`;
+      context = `\n\nCANDIDATE RESUME:\n${resume}\nBuild answers from their specific achievements and background.`;
     }
-    return `You are a Google behavioral interviewer coach. A candidate needs to answer this behavioral question.${context}
+    return `You are a behavioral interviewer coach. A candidate needs to answer this behavioral question.${context}
 
 IMPORTANT: Your answer should follow STAR format and be repeatable in 2 minutes.
 
@@ -124,7 +124,7 @@ A - Action (What YOU did specifically)
 R - Result (Outcome & metrics if possible)
 
 Then add:
-- Why this shows Google values (collaboration, innovation, user focus, etc.)
+- Why this shows key professional qualities (teamwork, problem-solving, leadership, communication, etc.)
 - Potential follow-up questions they might ask
 
 Keep it SHORT and confident!`;

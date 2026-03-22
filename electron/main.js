@@ -48,11 +48,11 @@ app.on('activate', () => {
 // IPC handlers for backend communication
 ipcMain.handle('get-hints', async (event, data) => {
   try {
-    const { question, category } = data;
+    const { question, category, resume = '', jobDesc = '' } = data;
     const response = await fetch('http://localhost:5000/api/hints', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, category }),
+      body: JSON.stringify({ question, category, resume, jobDesc }),
     });
     return await response.json();
   } catch (error) {
