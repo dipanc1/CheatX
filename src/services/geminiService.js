@@ -1,11 +1,22 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk');
 
 class GeminiService {
-  constructor(apiKey) {
-    this.apiKey = apiKey;
-    this.client = new GoogleGenerativeAI(apiKey);
-    // Use gemini-1.5-flash (free tier, fast, reliable)
-    this.model = this.client.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+  constructor(geminiKey, groqKey) {
+    this.geminiKey = geminiKey;
+    this.groqKey = groqKey;
+    
+    // Initialize Gemini
+    if (geminiKey) {
+      this.geminiClient = new GoogleGenerativeAI(geminiKey);
+      this.geminiModel = this.geminiClient.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    }
+    
+    // Initialize Groq as fallback
+    if (groqKey) {
+      this.groqClient = new Groq({ apiKey: groqKey });
+      this.groqModel = 'mixtral-8x7b-32768';
+    }
   }
 
   async classifyQuestion(question) {
@@ -15,8 +26,26 @@ Question: "${question}"
 
 Respond with ONLY the category name.`;
 
-    const result = await this.model.generateContent(prompt);
-    return result.response.text().trim().toLowerCase();
+    try {
+      if (this.geminiModel) {
+        const result = await this.geminiModel.generateContent(prompt);
+        return result.response.text().trim().toLowerCase();
+      }
+    } catch (error) {
+      console.warn('⚠️  Gemini classifier failed, falling back to Groq:', error.message);
+    }
+
+    // Fallback to Groq
+    if (this.groqClient) {
+      const message = await this.groqClient.messages.create({
+        model: this.groqModel,
+        max_tokens: 100,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      return message.content[0].text.trim().toLowerCase();
+    }
+
+    throw new Error('No LLM provider available');
   }
 
   async generateHints(question, category = 'auto', resume = '', jobDesc = '') {
@@ -33,11 +62,33 @@ Respond with ONLY the category name.`;
     };
 
     const prompt = prompts[classifiedCategory] || prompts.coding;
-    const result = await this.model.generateContent(prompt);
-    return {
-      classification: classifiedCategory,
-      response: result.response.text(),
-    };
+
+    try {
+      if (this.geminiModel) {
+        const result = await this.geminiModel.generateContent(prompt);
+        return {
+          classification: classifiedCategory,
+          response: result.response.text(),
+        };
+      }
+    } catch (error) {
+      console.warn('⚠️  Gemini generation failed, falling back to Groq:', error.message);
+    }
+
+    // Fallback to Groq
+    if (this.groqClient) {
+      const message = await this.groqClient.messages.create({
+        model: this.groqModel,
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      return {
+        classification: classifiedCategory,
+        response: message.content[0].text,
+      };
+    }
+
+    throw new Error('No LLM provider available');
   }
 
   getCodingPrompt(question, resume = '', jobDesc = '') {

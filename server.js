@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 // Initialize services
-const geminiService = new GeminiService(process.env.GEMINI_API_KEY);
+const geminiService = new GeminiService(process.env.GROQ_API_KEY);
 const db = new Database();
 
 // Routes

@@ -15,23 +15,24 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.11.0",
+    "axios": "^1.6.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "electron-is-dev": "^2.0.0",
+    "express": "^4.18.2",
+    "groq-sdk": "^1.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
-    "electron-is-dev": "^2.0.0",
-    "@google/generative-ai": "^0.11.0",
-    "sqlite3": "^5.1.6",
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "axios": "^1.6.2"
+    "sqlite3": "^5.1.6"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "electron": "^28.0.0",
     "electron-builder": "^24.6.4",
-    "concurrently": "^8.2.2",
-    "wait-on": "^7.0.1",
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "wait-on": "^7.0.1"
   },
   "build": {
     "appId": "com.interview.copilot",
