@@ -48,17 +48,17 @@ Respond with ONLY the category name.`;
     throw new Error('No LLM provider available');
   }
 
-  async generateHints(question, category = 'auto', resume = '', jobDesc = '') {
+  async generateHints(question, category = 'auto', resume = '', jobDesc = '', conversationHistory = []) {
     let classifiedCategory = category;
     if (category === 'auto') {
       classifiedCategory = await this.classifyQuestion(question);
     }
 
     const prompts = {
-      coding: this.getCodingPrompt(question, resume, jobDesc),
-      lld: this.getLLDPrompt(question, resume, jobDesc),
-      hld: this.getHLDPrompt(question, resume, jobDesc),
-      behavioral: this.getBehavioralPrompt(question, resume, jobDesc),
+      coding: this.getCodingPrompt(question, resume, jobDesc, conversationHistory),
+      lld: this.getLLDPrompt(question, resume, jobDesc, conversationHistory),
+      hld: this.getHLDPrompt(question, resume, jobDesc, conversationHistory),
+      behavioral: this.getBehavioralPrompt(question, resume, jobDesc, conversationHistory),
     };
 
     const prompt = prompts[classifiedCategory] || prompts.coding;
@@ -91,14 +91,28 @@ Respond with ONLY the category name.`;
     throw new Error('No LLM provider available');
   }
 
-  getCodingPrompt(question, resume = '', jobDesc = '') {
+  getConversationContext(conversationHistory = []) {
+    if (!conversationHistory || conversationHistory.length === 0) {
+      return '';
+    }
+    let context = '\n\n=== INTERVIEW CONTEXT (Previous Q&A) ===\n';
+    conversationHistory.forEach((exchange, index) => {
+      context += `Q${index + 1}: ${exchange.question}\nA${index + 1}: ${exchange.answer.substring(0, 200)}...\n\n`;
+    });
+    context += '=== Current Question ===\n';
+    return context;
+  }
+
+  getCodingPrompt(question, resume = '', jobDesc = '', conversationHistory = []) {
     let context = '';
     if (resume || jobDesc) {
       context = `\n\nCANDIDATE CONTEXT:\n`;
       if (resume) context += `Resume: ${resume}\n`;
       if (jobDesc) context += `Target role: ${jobDesc}\n`;
     }
-    return `You are an interview coach. A candidate is being asked this coding question during their interview. They will repeat your answer to the interviewer.${context}
+    
+    const conversationContext = this.getConversationContext(conversationHistory);
+    return `You are an interview coach. A candidate is being asked this coding question during their interview. They will repeat your answer to the interviewer.${context}${conversationContext}
 IMPORTANT: Your answer must be CONCISE, CLEAR, and directly REPEATABLE in an interview. Skip explanations - just give the approach + code.
 
 Question: "${question}"
@@ -113,14 +127,15 @@ Format your response as:
 Remember: Keep it SHORT. They need to say this in the interview!`;
   }
 
-  getLLDPrompt(question, resume = '', jobDesc = '') {
+  getLLDPrompt(question, resume = '', jobDesc = '', conversationHistory = []) {
     let context = '';
     if (resume || jobDesc) {
       context = `\n\nCANDIDATE CONTEXT:\n`;
       if (resume) context += `Background: ${resume}\n`;
       if (jobDesc) context += `Target role: ${jobDesc}\n`;
     }
-    return `You are a Google interview coach. A candidate is being asked this Low Level Design (LLD) question.${context}
+    const conversationContext = this.getConversationContext(conversationHistory);
+    return `You are an interview coach. A candidate is being asked this Low Level Design (LLD) question.${context}${conversationContext}
 IMPORTANT: Your answer must be CONCISE and directly expressible in 2-3 minutes.
 
 Question: "${question}"
@@ -135,14 +150,15 @@ Format:
 Keep it SHORT and actionable!`;
   }
 
-  getHLDPrompt(question, resume = '', jobDesc = '') {
+  getHLDPrompt(question, resume = '', jobDesc = '', conversationHistory = []) {
     let context = '';
     if (resume || jobDesc) {
       context = `\n\nCANDIDATE CONTEXT:\n`;
       if (resume) context += `Experience: ${resume}\n`;
       if (jobDesc) context += `Target role: ${jobDesc}\n`;
     }
-    return `You are a system design interview coach. A candidate is being asked this High Level Design (HLD) question.${context}
+    const conversationContext = this.getConversationContext(conversationHistory);
+    return `You are a system design interview coach. A candidate is being asked this High Level Design (HLD) question.${context}${conversationContext}
 IMPORTANT: Give a SHORT, reproducible answer that can be sketched in 10-15 minutes.
 
 Question: "${question}"
@@ -157,13 +173,13 @@ Format:
 Draw simple ASCII diagram if helpful. Keep it SHORT!`;
   }
 
-  getBehavioralPrompt(question, resume = '', jobDesc = '') {
+  getBehavioralPrompt(question, resume = '', jobDesc = '', conversationHistory = []) {
     let context = '';
     if (resume) {
       context = `\n\nCANDIDATE RESUME:\n${resume}\nBuild answers from their specific achievements and background.`;
     }
-    return `You are a behavioral interviewer coach. A candidate needs to answer this behavioral question.${context}
-
+    const conversationContext = this.getConversationContext(conversationHistory);
+    return `You are a behavioral interviewer coach. A candidate needs to answer this behavioral question.${context}${conversationContext}
 IMPORTANT: Your answer should follow STAR format and be repeatable in 2 minutes.
 
 Question: "${question}"

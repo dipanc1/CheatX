@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const crypto = require('crypto');
 
 const LLMService = require('./src/services/llmService');
 const Database = require('./src/db/database');
@@ -17,10 +18,102 @@ app.use(express.json({ limit: '50mb' }));
 const llmService = new LLMService(process.env.GEMINI_API_KEY, process.env.GROQ_API_KEY);
 const db = new Database();
 
+// In-memory conversation history cache (for current session only)
+const conversationCache = new Map();
+
+// Helper function to generate mock hints for dev mode
+function getMockHints(question, category) {
+  const mockResponses = {
+    coding: `**Problem Type:** Array/Sorting
+**Approach:** Two-pointer technique - sort array and use pointer logic to find target sum.
+**Edge Cases:** Empty array, single element, duplicates, negative numbers
+**Code Example:**
+\`\`\`java
+public int[] solve(int[] arr, int target) {
+  Arrays.sort(arr);
+  int left = 0, right = arr.length - 1;
+  while (left < right) {
+    if (arr[left] + arr[right] == target) return new int[]{left, right};
+    if (arr[left] + arr[right] < target) left++;
+    else right--;
+  }
+  return new int[]{-1, -1};
+}
+\`\`\`
+**Time Complexity:** O(n log n), **Space Complexity:** O(1)`,
+    
+    lld: `**Core Classes:**
+- PaymentProcessor (handles transactions)
+- User (represents customer)
+- Transaction (models payment record)
+- NotificationService (sends updates)
+
+**Key Design Patterns:** Strategy Pattern (different payment methods), Observer Pattern (notifications)
+
+**Essential Methods:**
+- processPayment(User, amount)
+- validateTransaction()
+- getTransactionHistory()
+- handleFailure()
+
+**Trade-offs:**
+1. Synchronous vs Async: Async better for scalability but complex error handling
+2. Database consistency vs availability
+
+**Interface Skeleton:**
+\`\`\`java
+public interface PaymentGateway {
+  Result processPayment(Transaction t);
+  Result refund(String txnId);
+}
+\`\`\``,
+    
+    hld: `**Architecture Type:** Microservices
+
+**Core Components:**
+1. API Gateway (request routing)
+2. Payment Service (process transactions)
+3. User Service (manage accounts)
+4. Notification Service (send alerts)
+5. Database Layer (persistence)
+6. Cache Layer (Redis for hot data)
+
+**Data Storage:** PostgreSQL (users, transactions), Redis (cache), Message Queue (events)
+
+**Scalability:** Load balancing with horizontal scaling, database sharding by user_id, rate limiting
+
+**Bottlenecks & Trade-offs:**
+- Network latency between services → use service mesh
+- Database throughput → implement read replicas, caching
+- Data consistency vs availability → eventual consistency pattern`,
+    
+    behavioral: `**STAR Format Answer:**
+
+**Situation:** While working on API integration project, discovered performance issues with 3rd party service calls.
+
+**Task:** Was responsible for improving system reliability and reducing latency.
+
+**Action:** 
+- Implemented caching layer using Redis
+- Added circuit breaker pattern for fault tolerance
+- Created monitoring dashboard for better visibility
+- Led code review sessions with team
+
+**Result:** 
+- Reduced API latency by 60%
+- Improved system uptime from 98% to 99.9%
+- Mentored 2 junior engineers on best practices
+
+**Why This Shows:** Leadership (mentored team), Problem-solving (designed solution), Initiative (proactive monitoring)`,
+  };
+
+  return mockResponses[category] || mockResponses.coding;
+}
+
 // Routes
 app.post('/api/hints', async (req, res) => {
   try {
-    const { question, category, resume = '', jobDesc = '' } = req.body;
+    let { question, category, resume = '', jobDesc = '', sessionId, company = '', role = '' } = req.body;
     if (!question || typeof question !== 'string') {
       return res.status(400).json({ error: 'Question must be a non-empty string' });
     }
@@ -30,21 +123,49 @@ app.post('/api/hints', async (req, res) => {
       return res.status(400).json({ error: 'Question cannot be empty' });
     }
 
+    // Create or get session
+    if (!sessionId) {
+      sessionId = await db.createSession(company, role, resume, jobDesc);
+      console.log(`✨ New session created: ${sessionId}`);
+    }
+
+    // Load conversation history from database
+    const dbConversations = await db.getSessionConversations(sessionId);
+    const conversationHistory = dbConversations.map(conv => ({
+      question: conv.question,
+      answer: conv.answer
+    }));
+
     // Classify question if needed
     let classifiedCategory = category;
     if (!category || category === 'auto') {
       classifiedCategory = QuestionClassifier.classify(questionStr);
     }
 
-    // Generate hints using LLM (Gemini primary, Groq fallback) with context
-    const hints = await llmService.generateHints(questionStr, classifiedCategory, resume, jobDesc);
+    // Use mock response in dev mode, real LLM otherwise
+    let hints;
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🎭 Using mock response (dev mode)');
+      hints = {
+        classification: classifiedCategory,
+        response: getMockHints(questionStr, classifiedCategory),
+      };
+    } else {
+      // Generate hints using LLM with conversation context
+      hints = await llmService.generateHints(questionStr, classifiedCategory, resume, jobDesc, conversationHistory);
+    }
+
+    // Save to database
+    await db.saveConversation(sessionId, questionStr, classifiedCategory, hints.response);
 
     // Parse hints into structured format
     const parsedHints = parseHints(hints.response, classifiedCategory);
 
     return res.json({
+      sessionId,
       classification: classifiedCategory,
       response: hints.response,
+      historyCount: conversationHistory.length + 1,
       ...parsedHints,
     });
   } catch (error) {
@@ -53,10 +174,115 @@ app.post('/api/hints', async (req, res) => {
   }
 });
 
+// Fast question classification endpoint (for real-time interview mode)
+app.post('/api/classify', async (req, res) => {
+  try {
+    const { question } = req.body;
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({ error: 'Question must be a non-empty string' });
+    }
+
+    const questionStr = question.trim();
+    if (!questionStr) {
+      return res.status(400).json({ error: 'Question cannot be empty' });
+    }
+
+    // Instant classification (no LLM needed - keyword based)
+    const category = QuestionClassifier.classify(questionStr);
+
+    return res.json({
+      question: questionStr,
+      category,
+      timestamps: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error classifying question:', error);
+    return res.status(500).json({ error: 'Classification failed', details: error.message });
+  }
+});
+
+// NEW SESSION ENDPOINTS FOR DATABASE
+
+// Create a new session
+app.post('/api/sessions', async (req, res) => {
+  try {
+    const { company = '', role = '', resume = '', jobDesc = '' } = req.body;
+    const sessionId = await db.createSession(company, role, resume, jobDesc);
+    return res.json({ sessionId, message: 'Session created' });
+  } catch (error) {
+    console.error('Error creating session:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all sessions
+app.get('/api/sessions', async (req, res) => {
+  try {
+    const sessions = await db.getAllSessions(50);
+    return res.json({ sessions });
+  } catch (error) {
+    console.error('Error fetching sessions:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Get specific session with all conversations
+app.get('/api/sessions/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const session = await db.getSession(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    const conversations = await db.getSessionConversations(sessionId);
+    return res.json({ session, conversations });
+  } catch (error) {
+    console.error('Error fetching session:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Get sessions by category
+app.get('/api/sessions/category/:category', async (req, res) => {
+  try {
+    const { category } = req.params;
+    const sessions = await db.getSessionsByCategory(category);
+    return res.json({ sessions });
+  } catch (error) {
+    console.error('Error fetching sessions by category:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Get analytics
+app.get('/api/analytics', async (req, res) => {
+  try {
+    const analytics = await db.getAnalytics();
+    return res.json(analytics);
+  } catch (error) {
+    console.error('Error fetching analytics:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a session
+app.delete('/api/sessions/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    await db.deleteSession(sessionId);
+    return res.json({ message: 'Session deleted' });
+  } catch (error) {
+    console.error('Error deleting session:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// LEGACY ENDPOINTS
+
 app.post('/api/session', async (req, res) => {
   try {
     const { roundType, title } = req.body;
-    const sessionId = await db.createSession(roundType, title);
+    const sessionId = await db.createLegacySession(roundType, title);
     return res.json({ sessionId });
   } catch (error) {
     console.error('Error creating session:', error);
