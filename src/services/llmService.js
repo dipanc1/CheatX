@@ -1,7 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Groq = require('groq-sdk');
 
-class GeminiService {
+class LLMService {
   constructor(geminiKey, groqKey) {
     this.geminiKey = geminiKey;
     this.groqKey = groqKey;
@@ -182,4 +182,4 @@ Keep it SHORT and confident!`;
   }
 }
 
-module.exports = GeminiService;
+module.exports = LLMService;

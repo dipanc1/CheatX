@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const GeminiService = require('./src/services/geminiService');
+const LLMService = require('./src/services/llmService');
 const Database = require('./src/db/database');
 const QuestionClassifier = require('./src/utils/questionClassifier');
 
@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 // Initialize services
-const geminiService = new GeminiService(process.env.GROQ_API_KEY);
+const llmService = new LLMService(process.env.GEMINI_API_KEY, process.env.GROQ_API_KEY);
 const db = new Database();
 
 // Routes
@@ -36,8 +36,8 @@ app.post('/api/hints', async (req, res) => {
       classifiedCategory = QuestionClassifier.classify(questionStr);
     }
 
-    // Generate hints using Gemini with context
-    const hints = await geminiService.generateHints(questionStr, classifiedCategory, resume, jobDesc);
+    // Generate hints using LLM (Gemini primary, Groq fallback) with context
+    const hints = await llmService.generateHints(questionStr, classifiedCategory, resume, jobDesc);
 
     // Parse hints into structured format
     const parsedHints = parseHints(hints.response, classifiedCategory);
