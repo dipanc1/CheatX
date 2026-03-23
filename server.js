@@ -172,7 +172,7 @@ app.post('/api/hints', async (req, res) => {
       };
     } else {
       // Generate hints using LLM with conversation context
-      hints = await llmService.generateHints(questionStr, classifiedCategory, resume, jobDesc, historyToUse);
+      hints = await llmService.generateHints(questionStr, classifiedCategory, resume, jobDesc, historyToUse, company, role);
     }
 
     // Save to database

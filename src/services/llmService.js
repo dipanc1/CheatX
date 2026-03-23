@@ -6,31 +6,48 @@ class LLMService {
   constructor(geminiKey, groqKey) {
     this.geminiKey = geminiKey;
     this.groqKey = groqKey;
-    
+
     // Initialize Gemini
     if (geminiKey) {
       this.geminiClient = new GoogleGenerativeAI(geminiKey);
-      this.geminiModel = this.geminiClient.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+      this.geminiModel = this.geminiClient.getGenerativeModel({
+        model: 'gemini-3.1-pro-preview',
+        generationConfig: { temperature: 0.4 },
+      });
     }
-    
+
     // Initialize Groq
     if (groqKey) {
       this.groqClient = new Groq({ apiKey: groqKey });
-      this.groqModel = 'openai/gpt-oss-20b';
+      this.groqModel = 'meta-llama/llama-4-scout-17b-16e-instruct';
     }
   }
 
   async classifyQuestion(question) {
-    const prompt = `Classify this interview question into one of: coding, LLD (Low Level Design), HLD (High Level Design), behavioral.
-    
+    const systemMsg = 'You are a strict interview question classifier. Respond with exactly one word: coding, lld, hld, or behavioral. Nothing else.';
+    const prompt = `Classify this interview question into exactly one category.
+
+Categories:
+- coding: algorithm, data structure, write code, optimize, implement
+- lld: class design, OOP, design patterns, object modeling
+- hld: system design, scalability, distributed systems, architecture at scale
+- behavioral: past experience, teamwork, conflict, leadership, STAR
+
+Examples:
+- "Implement a LRU cache" → coding
+- "Design a parking lot system with classes" → lld
+- "Design Twitter for 100M users" → hld
+- "Tell me about a time you disagreed with your manager" → behavioral
+
 Question: "${question}"
 
-Respond with ONLY the category name.`;
+Category:`;
 
     try {
       if (this.geminiModel) {
         const result = await this.geminiModel.generateContent(prompt);
-        return result.response.text().trim().toLowerCase();
+        const raw = result.response.text().trim().toLowerCase();
+        return this.normalizeCategory(raw);
       }
     } catch (error) {
       console.warn('⚠️  Gemini classifier failed, falling back to Groq:', error.message);
@@ -40,13 +57,26 @@ Respond with ONLY the category name.`;
     if (this.groqClient) {
       const message = await this.groqClient.chat.completions.create({
         model: this.groqModel,
-        max_tokens: 100,
-        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 10,
+        temperature: 0.1,
+        messages: [
+          { role: 'system', content: systemMsg },
+          { role: 'user', content: prompt },
+        ],
       });
-      return message.choices[0]?.message?.content.trim().toLowerCase();
+      const raw = message.choices[0]?.message?.content.trim().toLowerCase();
+      return this.normalizeCategory(raw);
     }
 
     throw new Error('No LLM provider available');
+  }
+
+  normalizeCategory(raw) {
+    if (raw.includes('coding')) return 'coding';
+    if (raw.includes('lld') || raw.includes('low level')) return 'lld';
+    if (raw.includes('hld') || raw.includes('high level')) return 'hld';
+    if (raw.includes('behavioral')) return 'behavioral';
+    return 'coding'; // safe default
   }
 
   // Uses Groq Whisper for Speech-to-Text
@@ -70,32 +100,34 @@ Respond with ONLY the category name.`;
     }
   }
 
-  async generateHints(question, category = 'auto', resume = '', jobDesc = '', conversationHistory = []) {
+  async generateHints(question, category = 'auto', resume = '', jobDesc = '', conversationHistory = [], company = '', role = '') {
     if (DEBUG_HINTS) {
       console.log('[LLM] generateHints', {
-        category,
+        category, company, role,
         hasResume: Boolean(resume),
         hasJobDesc: Boolean(jobDesc),
         contextExchanges: conversationHistory.length,
       });
     }
-    
+
     let classifiedCategory = category;
     if (category === 'auto') {
       classifiedCategory = await this.classifyQuestion(question);
     }
 
+    const systemMsg = this.getSystemMessage(classifiedCategory);
     const prompts = {
-      coding: this.getCodingPrompt(question, resume, jobDesc, conversationHistory),
-      lld: this.getLLDPrompt(question, resume, jobDesc, conversationHistory),
-      hld: this.getHLDPrompt(question, resume, jobDesc, conversationHistory),
-      behavioral: this.getBehavioralPrompt(question, resume, jobDesc, conversationHistory),
+      coding: this.getCodingPrompt(question, resume, jobDesc, conversationHistory, company, role),
+      lld: this.getLLDPrompt(question, resume, jobDesc, conversationHistory, company, role),
+      hld: this.getHLDPrompt(question, resume, jobDesc, conversationHistory, company, role),
+      behavioral: this.getBehavioralPrompt(question, resume, jobDesc, conversationHistory, company, role),
     };
 
     const prompt = prompts[classifiedCategory] || prompts.coding;
     if (DEBUG_HINTS) {
       console.log('----- [LLM PROMPT START] -----');
-      console.log(prompt);
+      console.log('SYSTEM:', systemMsg);
+      console.log('USER:', prompt);
       console.log('----- [LLM PROMPT END] -----');
     }
 
@@ -105,6 +137,9 @@ Respond with ONLY the category name.`;
         const response = result.response.text();
         if (DEBUG_HINTS) {
           console.log('[LLM] Gemini success', { responseLength: response.length, classifiedCategory });
+        }
+        if (!response || response.trim().length < 20) {
+          throw new Error('Gemini returned an empty or too-short response');
         }
         return {
           classification: classifiedCategory,
@@ -119,12 +154,19 @@ Respond with ONLY the category name.`;
     if (this.groqClient) {
       const message = await this.groqClient.chat.completions.create({
         model: this.groqModel,
-        max_tokens: 2000,
-        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 4000,
+        temperature: 0.4,
+        messages: [
+          { role: 'system', content: systemMsg },
+          { role: 'user', content: prompt },
+        ],
       });
       const response = message.choices[0]?.message?.content || '';
       if (DEBUG_HINTS) {
         console.log('[LLM] Groq success', { responseLength: response.length, classifiedCategory });
+      }
+      if (!response || response.trim().length < 20) {
+        throw new Error('Groq returned an empty or too-short response');
       }
       return {
         classification: classifiedCategory,
@@ -135,142 +177,170 @@ Respond with ONLY the category name.`;
     throw new Error('No LLM provider available');
   }
 
+  getSystemMessage(category) {
+    const base = 'You are an expert interview coach. The candidate will speak your answer directly to the interviewer, so write in a natural, speakable tone. Be concise and high-signal. Never fabricate achievements — only reference what is in the resume.';
+    const categorySpecific = {
+      coding: ' You specialize in coding interviews — algorithms, data structures, and problem solving.',
+      lld: ' You specialize in Low Level Design interviews — OOP, design patterns, and clean architecture.',
+      hld: ' You specialize in High Level System Design interviews — distributed systems, scalability, and infrastructure.',
+      behavioral: ' You specialize in behavioral interviews — STAR format, leadership, and impact stories.',
+    };
+    return base + (categorySpecific[category] || '');
+  }
+
   getConversationContext(conversationHistory = []) {
     if (!conversationHistory || conversationHistory.length === 0) {
       return '';
     }
-    let context = '\n\n=== INTERVIEW CONTEXT (Most Recent Q&A) ===\n';
+    let context = '\n\n=== INTERVIEW CONTEXT (Previous Q&A) ===\n';
     conversationHistory.forEach((exchange, index) => {
-      context += `Q${index + 1}: ${exchange.question}\nA${index + 1}: ${exchange.answer.substring(0, 200)}...\n\n`;
+      context += `Q${index + 1}: ${exchange.question}\nA${index + 1}: ${exchange.answer.substring(0, 600)}\n\n`;
     });
-    context += '=== Current Question ===\n';
+    context += '=== Current Question (answer this one) ===\n';
     return context;
   }
 
-  getCodingPrompt(question, resume = '', jobDesc = '', conversationHistory = []) {
+  getCompanyRoleContext(company, role) {
+    let ctx = '';
+    if (company) ctx += `Target Company: ${company}\n`;
+    if (role) ctx += `Target Role: ${role}\n`;
+    return ctx ? `\n${ctx}` : '';
+  }
+
+  getCodingPrompt(question, resume = '', jobDesc = '', conversationHistory = [], company = '', role = '') {
     let context = '';
     if (resume || jobDesc) {
       context = `\n\nCANDIDATE CONTEXT:\n`;
       if (resume) context += `Resume: ${resume}\n`;
-      if (jobDesc) context += `Target role: ${jobDesc}\n`;
+      if (jobDesc) context += `Job Description: ${jobDesc}\n`;
     }
-    
+    context += this.getCompanyRoleContext(company, role);
     const conversationContext = this.getConversationContext(conversationHistory);
-    return `You are an interview coach. The candidate will repeat your answer to the interviewer.${context}${conversationContext}
-  Goal: Give a concise, high-signal coding answer that sounds natural in a real interview.
 
-  Question: "${question}"
+    return `${context}${conversationContext}
+Question: "${question}"
 
-  Rules:
-  - Keep the total answer concise and directly speakable.
-  - Prefer an optimal approach; mention the brute-force baseline in one short line if useful.
-  - Use clear variable names in code.
-  - If the question is ambiguous, state 1-2 assumptions first.
+Think step-by-step about the optimal approach before writing code.
 
-  Format exactly:
-  1. Problem Type (e.g., Graph BFS, DP, Two Pointers)
-  2. Key Assumptions (only if needed)
-  3. Approach (3-5 crisp bullets)
-  4. Edge Cases (top 4-6)
-  5. Java Code (clean, runnable, interviewer-friendly)
-  6. Time and Space Complexity
+Rules:
+- Keep the answer concise and directly speakable in an interview.
+- Start with brute-force in one line, then present the optimal approach.
+- Use clear variable names. Code must correctly handle the edge cases you list.
+- If the question is ambiguous, state 1-2 assumptions first.
 
-  Do not add long theory. Keep it interview-repeatable.`;
+Format:
+1. Pattern (e.g., Sliding Window, Graph BFS, DP — one line)
+2. Key Assumptions (only if needed, skip if obvious)
+3. Approach (3-5 crisp bullets explaining the logic)
+4. Edge Cases (top 4-6, each in one line)
+5. Java Code (clean, runnable, well-commented for interviewer)
+6. Complexity: Time O(...) because ..., Space O(...) because ...
+
+No long theory. Interview-ready.`;
   }
 
-  getLLDPrompt(question, resume = '', jobDesc = '', conversationHistory = []) {
+  getLLDPrompt(question, resume = '', jobDesc = '', conversationHistory = [], company = '', role = '') {
     let context = '';
     if (resume || jobDesc) {
       context = `\n\nCANDIDATE CONTEXT:\n`;
       if (resume) context += `Background: ${resume}\n`;
-      if (jobDesc) context += `Target role: ${jobDesc}\n`;
+      if (jobDesc) context += `Job Description: ${jobDesc}\n`;
     }
+    context += this.getCompanyRoleContext(company, role);
     const conversationContext = this.getConversationContext(conversationHistory);
-    return `You are an interview coach. A candidate is answering a Low Level Design question.${context}${conversationContext}
-  Goal: Produce a compact, implementation-oriented answer they can present in 2-3 minutes.
 
-  Question: "${question}"
+    return `${context}${conversationContext}
+Question: "${question}"
 
-  Rules:
-  - Focus on core object model and APIs, not long explanations.
-  - Include only practical patterns that clearly help this design.
-  - Mention extensibility and one failure/validation concern.
+Rules:
+- Focus on core object model, APIs, and interactions — not lengthy explanations.
+- Apply SOLID principles and explain which ones matter most here.
+- Include practical design patterns that clearly help this design.
+- Address concurrency/thread-safety if relevant to the problem.
+- Mention extensibility points and key validation/failure concerns.
 
-  Format exactly:
-  1. Assumptions and Scope (2-4 bullets)
-  2. Core Entities and Interfaces (responsibilities)
-  3. Key Relationships and Data Flow
-  4. Critical APIs/Methods interviewer will probe
-  5. Design Patterns used and why (short)
-  6. Trade-offs (2-3 strong ones)
-  7. Minimal Java interface/class skeleton
+Format:
+1. Requirements Clarification (2-4 bullets: what's in scope, what's not)
+2. Core Entities & Responsibilities (class/interface list with one-line purpose)
+3. Relationships & Interaction Flow (how objects collaborate — describe the key sequence)
+4. Critical APIs/Methods the interviewer will probe
+5. Design Patterns Used (name + one line on why it fits)
+6. Concurrency & Edge Cases (thread-safety, race conditions if applicable)
+7. Trade-offs (2-3 strong ones with reasoning)
+8. Java Class/Interface Skeleton (minimal but complete enough to compile)
 
-  Keep it concise, concrete, and interview-ready.`;
+Keep it concrete and interview-ready.`;
   }
 
-  getHLDPrompt(question, resume = '', jobDesc = '', conversationHistory = []) {
+  getHLDPrompt(question, resume = '', jobDesc = '', conversationHistory = [], company = '', role = '') {
     let context = '';
     if (resume || jobDesc) {
       context = `\n\nCANDIDATE CONTEXT:\n`;
       if (resume) context += `Experience: ${resume}\n`;
-      if (jobDesc) context += `Target role: ${jobDesc}\n`;
+      if (jobDesc) context += `Job Description: ${jobDesc}\n`;
     }
+    context += this.getCompanyRoleContext(company, role);
     const conversationContext = this.getConversationContext(conversationHistory);
-    return `You are a system design interview coach. A candidate is answering a High Level Design question.${context}${conversationContext}
-  Goal: Give a structured answer they can whiteboard in 10-15 minutes.
 
-  Question: "${question}"
-
-  Rules:
-  - Start from requirements, then architecture, then scaling and trade-offs.
-  - Keep it practical; avoid generic cloud buzzwords.
-  - Include only the most important numbers and bottlenecks.
-
-  Format exactly:
-  1. Functional and Non-Functional Requirements (short)
-  2. Capacity Assumptions (traffic, storage; rough order-of-magnitude)
-  3. High-Level Architecture and Core Components (max 7)
-  4. Data Model and Storage Strategy (SQL/NoSQL/Cache)
-  5. API and Data Flow (request path in brief)
-  6. Scalability and Reliability (partitioning, cache, queue, failover)
-  7. Bottlenecks and Trade-offs (top 3)
-  8. Optional ASCII diagram (small)
-
-  Keep it concise and reproducible in interview speech.`;
-  }
-
-  getBehavioralPrompt(question, resume = '', jobDesc = '', conversationHistory = []) {
-    let context = '';
-    if (resume) {
-      context = `\n\nCANDIDATE RESUME:\n${resume}\nBuild answers from their specific achievements and background.`;
-    }
-    if (jobDesc) {
-      context += `\n\nROLE REQUIREMENTS:\n${jobDesc}\nAlign their examples with these job requirements and competencies.`;
-    }
-    const conversationContext = this.getConversationContext(conversationHistory);
-    return `You are a behavioral interview coach. The candidate must give a confident, natural answer.${context}${conversationContext}
-Goal: Build a crisp STAR response aligned with resume achievements and target role needs.
-
+    return `${context}${conversationContext}
 Question: "${question}"
 
 Rules:
-- Use first-person language (I did, I decided, I improved).
-- Prioritize one strong example over multiple weak examples.
-- Include measurable impact when possible.
-- Keep the answer tight enough for 90-120 seconds.
+- Start from requirements → capacity estimates → architecture → deep-dive → scaling → trade-offs.
+- Name specific technologies where appropriate (e.g., Kafka, Redis, PostgreSQL, S3) — don't be vague.
+- Show your math for back-of-envelope estimates (QPS, storage, bandwidth).
+- Deep-dive into 1-2 critical components that are the hardest part of this design.
+- Include monitoring and observability considerations.
 
-Format exactly:
-1. Best Example Choice (1 line: why this example fits the question)
+Format:
+1. Functional & Non-Functional Requirements (bullet each)
+2. Back-of-Envelope Estimates (show math: DAU → QPS → storage → bandwidth)
+3. High-Level Architecture (core components, max 7, with ASCII diagram)
+4. Data Model & Storage (SQL/NoSQL/Cache choices with reasoning)
+5. API Design & Request Flow (key endpoints, request path end-to-end)
+6. Deep-Dive (pick 1-2 hard components — explain in detail)
+7. Scalability & Reliability (partitioning, replication, caching, queues, failover)
+8. Monitoring & Alerting (key metrics to track, SLOs)
+9. Bottlenecks & Trade-offs (top 3, with what you'd choose and why)
+
+Keep it structured and whiteboard-friendly.`;
+  }
+
+  getBehavioralPrompt(question, resume = '', jobDesc = '', conversationHistory = [], company = '', role = '') {
+    let context = '';
+    if (resume) {
+      context = `\n\nCANDIDATE RESUME:\n${resume}\nIMPORTANT: Only use achievements and experiences actually listed in this resume. Do NOT fabricate or invent examples.`;
+    }
+    if (jobDesc) {
+      context += `\n\nROLE REQUIREMENTS:\n${jobDesc}\nAlign the answer with these job requirements and competencies.`;
+    }
+    if (company) {
+      context += `\n\nTARGET COMPANY: ${company}\nTailor the answer to reflect this company's known culture and values (e.g., Amazon → Leadership Principles, Google → Googleyness, Meta → Move Fast).`;
+    }
+    if (role) {
+      context += `\nTARGET ROLE: ${role}`;
+    }
+    const conversationContext = this.getConversationContext(conversationHistory);
+
+    return `${context}${conversationContext}
+Question: "${question}"
+
+Rules:
+- Use first-person language throughout (I led, I decided, I improved).
+- Pick ONE strong, specific example from the resume — depth over breadth.
+- Include measurable impact: numbers, percentages, timelines.
+- Keep the answer deliverable in 2-3 minutes when spoken aloud.
+- Never invent stories or metrics not supported by the resume.
+
+Format:
+1. Why This Example (1 line: why this specific experience best answers the question)
 2. STAR Answer
-   S - Situation (brief)
-   T - Task (responsibility)
-   A - Actions (specific, high ownership)
-   R - Results (metrics + business/team impact)
-3. 30-second condensed version
-4. Why this maps to role requirements (3 bullets)
-5. Likely follow-up questions (3-5)
+   S - Situation (2-3 sentences of context)
+   T - Task (your specific responsibility and what was at stake)
+   A - Actions (3-4 specific steps YOU took, showing ownership and decision-making)
+   R - Results (quantified impact: metrics, business outcomes, team outcomes)
 
-Tone: confident, specific, no fluff.`;
+Tone: confident, specific, conversational — as if speaking to the interviewer.`;
   }
 }
 
