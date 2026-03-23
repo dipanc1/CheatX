@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const LLMService = require('./src/services/llmService');
 const Database = require('./src/db/database');
@@ -198,6 +200,39 @@ app.post('/api/classify', async (req, res) => {
   } catch (error) {
     console.error('Error classifying question:', error);
     return res.status(500).json({ error: 'Classification failed', details: error.message });
+  }
+});
+
+// Endpoint to transcribe audio using Groq Whisper
+app.post('/api/transcribe', async (req, res) => {
+  try {
+    const { audioBase64 } = req.body;
+    if (!audioBase64) {
+      return res.status(400).json({ error: 'No audio data provided' });
+    }
+
+    // Convert Base64 back to binary
+    const base64Data = audioBase64.replace(/^data:audio\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    // Save to temp file
+    // Groq requires an actual file stream for Whisper
+    const tempDir = path.join(__dirname, 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
+    
+    const filePath = path.join(tempDir, `audio_${Date.now()}.webm`);
+    fs.writeFileSync(filePath, buffer);
+
+    console.log(`🎙️ Transcribing audio file: ${filePath}`);
+    const transcript = await llmService.transcribeAudio(filePath);
+    
+    // Clean up temp file
+    fs.unlinkSync(filePath);
+
+    return res.json({ transcript: transcript.trim() });
+  } catch (error) {
+    console.error('Error transcribing audio:', error);
+    return res.status(500).json({ error: 'Transcription failed', details: error.message });
   }
 });
 

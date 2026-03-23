@@ -48,6 +48,27 @@ Respond with ONLY the category name.`;
     throw new Error('No LLM provider available');
   }
 
+  // Uses Groq Whisper for Speech-to-Text
+  async transcribeAudio(filePath) {
+    if (!this.groqClient) {
+      throw new Error('Groq client not initialized');
+    }
+    
+    const fs = require('fs');
+    try {
+      const transcription = await this.groqClient.audio.transcriptions.create({
+        file: fs.createReadStream(filePath),
+        model: 'whisper-large-v3',
+        response_format: 'json',
+        language: 'en', // Force English-only transcription (strict)
+      });
+      return transcription.text;
+    } catch (error) {
+      console.error('Groq Whisper error:', error);
+      throw error;
+    }
+  }
+
   async generateHints(question, category = 'auto', resume = '', jobDesc = '', conversationHistory = []) {
     let classifiedCategory = category;
     if (category === 'auto') {

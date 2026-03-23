@@ -14,11 +14,9 @@ function InterviewOverlay({
   loading,
   error,
   sessionInfo,
-  onRetry,
-  onSkip,
   onNextQuestion,
-  onManualInput,
   onToggleRecording,
+  onEndInterview,
 }) {
   const [minimized, setMinimized] = useState(false);
 
@@ -39,9 +37,9 @@ function InterviewOverlay({
         position: 'fixed',
         top: '20px',
         right: '20px',
-        width: minimized ? '350px' : '420px',
-        height: minimized ? '45px' : 'auto',
-        maxHeight: '85vh',
+        width: minimized ? '450px' : '700px',
+        height: minimized ? '50px' : 'auto',
+        maxHeight: '95vh',
         backgroundColor: '#0f0f1e',
         border: `2px solid ${categoryColor}`,
         borderRadius: '8px',
@@ -68,36 +66,56 @@ function InterviewOverlay({
           {isRecording && (
             <span
               style={{
-                width: '10px',
-                height: '10px',
+                width: '12px',
+                height: '12px',
                 backgroundColor: '#ff4444',
                 borderRadius: '50%',
                 animation: 'pulse 1s infinite',
               }}
             />
           )}
-          <span style={{ color: '#00d4ff', fontSize: '13px', fontWeight: 'bold' }}>
+          <span style={{ color: '#00d4ff', fontSize: '15px', fontWeight: 'bold' }}>
             🎙️ Interview Mode
           </span>
-          {sessionInfo && (
-            <span style={{ color: '#999', fontSize: '11px', marginLeft: '8px' }}>
+          {sessionInfo && sessionInfo.questionCount > 0 && (
+            <span style={{ color: '#999', fontSize: '12px', marginLeft: '8px' }}>
               Q{sessionInfo.questionCount}
             </span>
           )}
         </div>
-        <button
-          onClick={() => setMinimized(!minimized)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#00d4ff',
-            cursor: 'pointer',
-            fontSize: '16px',
-            padding: '0',
-          }}
-        >
-          {minimized ? '⬇️' : '⬆️'}
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => setMinimized(!minimized)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#00d4ff',
+              cursor: 'pointer',
+              fontSize: '16px',
+              padding: '0',
+            }}
+          >
+            {minimized ? '⬇️' : '⬆️'}
+          </button>
+          {onEndInterview && (
+            <button
+              onClick={onEndInterview}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#ff6666',
+                cursor: 'pointer',
+                fontSize: '16px',
+                padding: '0',
+                fontWeight: 'bold',
+                title: 'End interview session',
+              }}
+              title="End interview session"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {!minimized && (
@@ -114,7 +132,7 @@ function InterviewOverlay({
           {/* Question Section */}
           {currentQuestion && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ color: '#999', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              <div style={{ color: '#999', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 📝 Question
               </div>
               <div
@@ -122,11 +140,11 @@ function InterviewOverlay({
                   backgroundColor: 'rgba(0, 212, 255, 0.05)',
                   border: '1px solid rgba(0, 212, 255, 0.2)',
                   borderRadius: '6px',
-                  padding: '10px 12px',
-                  color: '#ccc',
-                  fontSize: '13px',
-                  lineHeight: '1.4',
-                  maxHeight: '80px',
+                  padding: '12px 14px',
+                  color: '#e0e0e0',
+                  fontSize: '15px',
+                  lineHeight: '1.6',
+                  maxHeight: '150px',
                   overflow: 'auto',
                 }}
               >
@@ -136,11 +154,11 @@ function InterviewOverlay({
                 <span
                   style={{
                     display: 'inline-block',
-                    padding: '4px 10px',
+                    padding: '6px 12px',
                     backgroundColor: categoryColor,
                     color: '#0f0f1e',
                     borderRadius: '4px',
-                    fontSize: '11px',
+                    fontSize: '12px',
                     fontWeight: 'bold',
                     textTransform: 'uppercase',
                   }}
@@ -154,7 +172,7 @@ function InterviewOverlay({
           {/* Hints Section */}
           {currentHints && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ color: '#999', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              <div style={{ color: '#999', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 💡 Hints
               </div>
               <div
@@ -162,11 +180,11 @@ function InterviewOverlay({
                   backgroundColor: 'rgba(0, 255, 136, 0.05)',
                   border: '1px solid rgba(0, 255, 136, 0.2)',
                   borderRadius: '6px',
-                  padding: '10px 12px',
-                  color: '#ccc',
-                  fontSize: '12px',
-                  lineHeight: '1.5',
-                  maxHeight: '120px',
+                  padding: '12px 14px',
+                  color: '#e0e0e0',
+                  fontSize: '14px',
+                  lineHeight: '1.7',
+                  maxHeight: '400px',
                   overflow: 'auto',
                   whiteSpace: 'pre-wrap',
                   wordWrap: 'break-word',
@@ -210,116 +228,55 @@ function InterviewOverlay({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '8px',
-              marginTop: '8px',
-            }}
-          >
-            {error && (
+          {/* Action Buttons - Pure Audio Flow */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+            {/* Show EITHER Recording button OR Next Question button, never both */}
+            
+            {/* Recording button (shows when recording OR no hints yet) */}
+            {!(currentHints && !loading && !error) && (
               <button
-                onClick={onRetry}
+                onClick={onToggleRecording}
                 style={{
-                  padding: '8px 12px',
-                  backgroundColor: '#ffb000',
-                  color: '#0f0f1e',
+                  padding: '12px 14px',
+                  backgroundColor: isRecording ? '#ff4444' : '#00d4ff',
+                  color: isRecording ? 'white' : '#0f0f1e',
                   border: 'none',
                   borderRadius: '4px',
-                  fontSize: '12px',
+                  fontSize: '14px',
                   fontWeight: 'bold',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                 }}
-                onMouseOver={(e) => (e.target.style.backgroundColor = '#ffc000')}
-                onMouseOut={(e) => (e.target.style.backgroundColor = '#ffb000')}
+                onMouseOver={(e) => (e.target.style.opacity = '0.85')}
+                onMouseOut={(e) => (e.target.style.opacity = '1')}
+                title={isRecording ? 'Stop listening for next question' : 'Start listening for question'}
               >
-                🔄 Retry
+                {isRecording ? '🔴 Stop Listening' : '🎤 Listen for Question'}
               </button>
             )}
 
-            <button
-              onClick={onSkip}
-              style={{
-                padding: '8px 12px',
-                backgroundColor: '#ff4444',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => (e.target.style.backgroundColor = '#ff6666')}
-              onMouseOut={(e) => (e.target.style.backgroundColor = '#ff4444')}
-            >
-              ⊘ Skip
-            </button>
-
-            <button
-              onClick={onToggleRecording}
-              style={{
-                padding: '8px 12px',
-                backgroundColor: isRecording ? '#ff4444' : '#00d4ff',
-                color: isRecording ? 'white' : '#0f0f1e',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                gridColumn: isRecording ? '1 / -1' : 'auto',
-              }}
-              onMouseOver={(e) => (
-                e.target.style.opacity = '0.8'
-              )}
-              onMouseOut={(e) => (
-                e.target.style.opacity = '1'
-              )}
-            >
-              {isRecording ? '⊘ Stop Recording' : '🎤 Start Recording'}
-            </button>
-
-            <button
-              onClick={onNextQuestion}
-              style={{
-                padding: '8px 12px',
-                backgroundColor: '#00ff88',
-                color: '#0f0f1e',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => (e.target.style.backgroundColor = '#00ffaa')}
-              onMouseOut={(e) => (e.target.style.backgroundColor = '#00ff88')}
-            >
-              ▶ Next Q
-            </button>
-
-            <button
-              onClick={onManualInput}
-              style={{
-                padding: '8px 12px',
-                backgroundColor: '#9966ff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => (e.target.style.backgroundColor = '#aa77ff')}
-              onMouseOut={(e) => (e.target.style.backgroundColor = '#9966ff')}
-            >
-              ✏️ Manual Input
-            </button>
+            {/* Next Question button (replaces listen button when hints ready) */}
+            {currentHints && !loading && !error && (
+              <button
+                onClick={onNextQuestion}
+                style={{
+                  padding: '12px 14px',
+                  backgroundColor: '#00ff88',
+                  color: '#0f0f1e',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={(e) => (e.target.style.backgroundColor = '#00ffaa')}
+                onMouseOut={(e) => (e.target.style.backgroundColor = '#00ff88')}
+                title="Clear these hints and listen for the next question"
+              >
+                ✅ Got It — Next Question
+              </button>
+            )}
           </div>
         </div>
       )}

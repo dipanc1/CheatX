@@ -4,6 +4,7 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
   const [sessions, setSessions] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' or 'analytics'
 
   useEffect(() => {
@@ -15,12 +16,19 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
 
   const loadSessions = async () => {
     setLoading(true);
+    setError('');
     try {
       const response = await fetch('http://localhost:5000/api/sessions');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       const data = await response.json();
+      console.log('✅ Sessions loaded:', data);
       setSessions(data.sessions || []);
     } catch (error) {
-      console.error('Error loading sessions:', error);
+      console.error('❌ Error loading sessions:', error);
+      setError(`Failed to load sessions: ${error.message}`);
+      setSessions([]);
     } finally {
       setLoading(false);
     }
@@ -29,10 +37,15 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
   const loadAnalytics = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/analytics');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       const data = await response.json();
+      console.log('✅ Analytics loaded:', data);
       setAnalytics(data);
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      console.error('❌ Error loading analytics:', error);
+      setAnalytics(null);
     }
   };
 
@@ -75,18 +88,37 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
         alignItems: 'center'
       }}>
         <h2 style={{ color: '#00d4ff', margin: 0, fontSize: '18px' }}>📋 History & Analytics</h2>
-        <button
-          onClick={onClose}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#00d4ff',
-            fontSize: '20px',
-            cursor: 'pointer'
-          }}
-        >
-          ✕
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => {
+              loadSessions();
+              loadAnalytics();
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#00d4ff',
+              fontSize: '18px',
+              cursor: 'pointer',
+              title: 'Refresh'
+            }}
+            title="Refresh history"
+          >
+            🔄
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#00d4ff',
+              fontSize: '20px',
+              cursor: 'pointer'
+            }}
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -127,6 +159,21 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
 
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '15px' }}>
+        {error && (
+          <div
+            style={{
+              padding: '12px',
+              marginBottom: '12px',
+              backgroundColor: 'rgba(255, 68, 68, 0.1)',
+              border: '1px solid rgba(255, 68, 68, 0.3)',
+              borderRadius: '4px',
+              color: '#ff6666',
+              fontSize: '12px',
+            }}
+          >
+            ⚠️ {error}
+          </div>
+        )}
         {loading && <p style={{ color: '#888', textAlign: 'center' }}>Loading...</p>}
 
         {activeTab === 'sessions' && (
@@ -178,62 +225,68 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
           </div>
         )}
 
-        {activeTab === 'analytics' && analytics && (
+        {activeTab === 'analytics' && (
           <div>
-            <div style={{
-              padding: '12px',
-              marginBottom: '15px',
-              background: 'rgba(0, 212, 255, 0.05)',
-              border: '1px solid rgba(0, 212, 255, 0.2)',
-              borderRadius: '6px'
-            }}>
-              <div style={{ fontSize: '12px', color: '#888' }}>Total Sessions</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#00d4ff' }}>
-                {analytics.totalSessions}
-              </div>
-            </div>
-
-            <div style={{
-              padding: '12px',
-              marginBottom: '15px',
-              background: 'rgba(0, 212, 255, 0.05)',
-              border: '1px solid rgba(0, 212, 255, 0.2)',
-              borderRadius: '6px'
-            }}>
-              <div style={{ fontSize: '12px', color: '#888' }}>Total Questions</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#00d4ff' }}>
-                {analytics.totalQuestions}
-              </div>
-            </div>
-
-            <div style={{
-              fontSize: '13px',
-              fontWeight: 'bold',
-              color: '#00d4ff',
-              marginBottom: '10px'
-            }}>
-              Questions by Type
-            </div>
-            {Object.entries(analytics.questionsByCategory || {}).map(([category, count]) => (
-              <div
-                key={category}
-                style={{
-                  padding: '10px',
-                  marginBottom: '8px',
+            {analytics ? (
+              <>
+                <div style={{
+                  padding: '12px',
+                  marginBottom: '15px',
                   background: 'rgba(0, 212, 255, 0.05)',
                   border: '1px solid rgba(0, 212, 255, 0.2)',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <span style={{ textTransform: 'uppercase', fontSize: '12px', color: '#ccc' }}>
-                  {category}
-                </span>
-                <span style={{ fontWeight: 'bold', color: '#00d4ff' }}>{count}</span>
-              </div>
-            ))}
+                  borderRadius: '6px'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#888' }}>Total Sessions</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#00d4ff' }}>
+                    {analytics.totalSessions}
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '12px',
+                  marginBottom: '15px',
+                  background: 'rgba(0, 212, 255, 0.05)',
+                  border: '1px solid rgba(0, 212, 255, 0.2)',
+                  borderRadius: '6px'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#888' }}>Total Questions</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#00d4ff' }}>
+                    {analytics.totalQuestions}
+                  </div>
+                </div>
+
+                <div style={{
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  color: '#00d4ff',
+                  marginBottom: '10px'
+                }}>
+                  Questions by Type
+                </div>
+                {Object.entries(analytics.questionsByCategory || {}).map(([category, count]) => (
+                  <div
+                    key={category}
+                    style={{
+                      padding: '10px',
+                      marginBottom: '8px',
+                      background: 'rgba(0, 212, 255, 0.05)',
+                      border: '1px solid rgba(0, 212, 255, 0.2)',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <span style={{ textTransform: 'uppercase', fontSize: '12px', color: '#ccc' }}>
+                      {category}
+                    </span>
+                    <span style={{ fontWeight: 'bold', color: '#00d4ff' }}>{count}</span>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <p style={{ color: '#888', textAlign: 'center' }}>No analytics available</p>
+            )}
           </div>
         )}
       </div>
