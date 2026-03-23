@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 function InterviewOverlay({
   isActive,
   isRecording,
+  categoryMode,
   currentQuestion,
   currentCategory,
   currentHints,
@@ -19,6 +20,7 @@ function InterviewOverlay({
   onEndInterview,
   useContextHistory,
   onToggleContextHistory,
+  onCategoryModeChange,
 }) {
   const [minimized, setMinimized] = useState(false);
 
@@ -86,6 +88,29 @@ function InterviewOverlay({
           )}
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          {onCategoryModeChange && (
+            <select
+              value={categoryMode || 'auto'}
+              onChange={(e) => onCategoryModeChange(e.target.value)}
+              style={{
+                background: 'rgba(0, 212, 255, 0.12)',
+                border: '1px solid rgba(0, 212, 255, 0.5)',
+                color: '#00d4ff',
+                cursor: 'pointer',
+                fontSize: '12px',
+                padding: '4px 8px',
+                borderRadius: '3px',
+                fontWeight: '600',
+              }}
+              title="Category mode (Auto by default)"
+            >
+              <option value="auto">Auto</option>
+              <option value="coding">Coding</option>
+              <option value="lld">LLD</option>
+              <option value="hld">HLD</option>
+              <option value="behavioral">Behavioral</option>
+            </select>
+          )}
           {onToggleContextHistory && (
             <button
               onClick={onToggleContextHistory}

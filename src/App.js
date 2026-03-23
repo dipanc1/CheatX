@@ -21,7 +21,8 @@ function App() {
   const [interviewError, setInterviewError] = useState('');
   const [historyCount, setHistoryCount] = useState(0);
   const [interviewQuestionCount, setInterviewQuestionCount] = useState(0); // Track questions answered in current interview
-  const [useContextHistory, setUseContextHistory] = useState(true); // Toggle for including previous Q&A context
+  const [useContextHistory, setUseContextHistory] = useState(false); // Toggle for including previous Q&A context
+  const [categoryMode, setCategoryMode] = useState('auto');
   const audioServiceRef = useRef(null);
   const interviewSessionIdRef = useRef(null);
 
@@ -88,6 +89,14 @@ function App() {
     try {
       setInterviewLoading(true);
       setInterviewError('');
+
+      // Manual mode: skip classifier and use selected category directly
+      if (categoryMode !== 'auto') {
+        setInterviewCategory(categoryMode);
+        setInterviewQuestionCount(prev => prev + 1);
+        await generateHintsForInterview(question, categoryMode);
+        return;
+      }
       
       const response = await fetch(`${API_BASE_URL}/api/classify`, {
         method: 'POST',
@@ -378,6 +387,7 @@ function App() {
       <InterviewOverlay
         isActive={interviewMode}
         isRecording={isRecording}
+        categoryMode={categoryMode}
         currentQuestion={interviewQuestion}
         currentCategory={interviewCategory}
         currentHints={interviewHints}
@@ -392,6 +402,7 @@ function App() {
         onEndInterview={handleEndInterview}
         useContextHistory={useContextHistory}
         onToggleContextHistory={() => setUseContextHistory(!useContextHistory)}
+        onCategoryModeChange={setCategoryMode}
       />
 
     </div>

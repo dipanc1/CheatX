@@ -156,19 +156,26 @@ Respond with ONLY the category name.`;
     }
     
     const conversationContext = this.getConversationContext(conversationHistory);
-    return `You are an interview coach. A candidate is being asked this coding question during their interview. They will repeat your answer to the interviewer.${context}${conversationContext}
-IMPORTANT: Your answer must be CONCISE, CLEAR, and directly REPEATABLE in an interview. Skip explanations - just give the approach + code.
+    return `You are an interview coach. The candidate will repeat your answer to the interviewer.${context}${conversationContext}
+  Goal: Give a concise, high-signal coding answer that sounds natural in a real interview.
 
-Question: "${question}"
+  Question: "${question}"
 
-Format your response as:
-1. Problem Type (e.g., "Graph BFS", "DP", "Two Pointers")
-2. Approach (2-3 sentences max)
-3. Edge Cases to mention
-4. Clean, working code (Java)
-5. Time & Space Complexity
+  Rules:
+  - Keep the total answer concise and directly speakable.
+  - Prefer an optimal approach; mention the brute-force baseline in one short line if useful.
+  - Use clear variable names in code.
+  - If the question is ambiguous, state 1-2 assumptions first.
 
-Remember: Keep it SHORT. They need to say this in the interview!`;
+  Format exactly:
+  1. Problem Type (e.g., Graph BFS, DP, Two Pointers)
+  2. Key Assumptions (only if needed)
+  3. Approach (3-5 crisp bullets)
+  4. Edge Cases (top 4-6)
+  5. Java Code (clean, runnable, interviewer-friendly)
+  6. Time and Space Complexity
+
+  Do not add long theory. Keep it interview-repeatable.`;
   }
 
   getLLDPrompt(question, resume = '', jobDesc = '', conversationHistory = []) {
@@ -179,19 +186,26 @@ Remember: Keep it SHORT. They need to say this in the interview!`;
       if (jobDesc) context += `Target role: ${jobDesc}\n`;
     }
     const conversationContext = this.getConversationContext(conversationHistory);
-    return `You are an interview coach. A candidate is being asked this Low Level Design (LLD) question.${context}${conversationContext}
-IMPORTANT: Your answer must be CONCISE and directly expressible in 2-3 minutes.
+    return `You are an interview coach. A candidate is answering a Low Level Design question.${context}${conversationContext}
+  Goal: Produce a compact, implementation-oriented answer they can present in 2-3 minutes.
 
-Question: "${question}"
+  Question: "${question}"
 
-Format:
-1. Core Classes/Interfaces (list them)
-2. Key Design Patterns (if any)
-3. Essential Methods (what the interviewer will probe)
-4. Trade-offs (1-2 important ones)
-5. One simple Java interface skeleton
+  Rules:
+  - Focus on core object model and APIs, not long explanations.
+  - Include only practical patterns that clearly help this design.
+  - Mention extensibility and one failure/validation concern.
 
-Keep it SHORT and actionable!`;
+  Format exactly:
+  1. Assumptions and Scope (2-4 bullets)
+  2. Core Entities and Interfaces (responsibilities)
+  3. Key Relationships and Data Flow
+  4. Critical APIs/Methods interviewer will probe
+  5. Design Patterns used and why (short)
+  6. Trade-offs (2-3 strong ones)
+  7. Minimal Java interface/class skeleton
+
+  Keep it concise, concrete, and interview-ready.`;
   }
 
   getHLDPrompt(question, resume = '', jobDesc = '', conversationHistory = []) {
@@ -202,19 +216,27 @@ Keep it SHORT and actionable!`;
       if (jobDesc) context += `Target role: ${jobDesc}\n`;
     }
     const conversationContext = this.getConversationContext(conversationHistory);
-    return `You are a system design interview coach. A candidate is being asked this High Level Design (HLD) question.${context}${conversationContext}
-IMPORTANT: Give a SHORT, reproducible answer that can be sketched in 10-15 minutes.
+    return `You are a system design interview coach. A candidate is answering a High Level Design question.${context}${conversationContext}
+  Goal: Give a structured answer they can whiteboard in 10-15 minutes.
 
-Question: "${question}"
+  Question: "${question}"
 
-Format:
-1. Architecture Type (Monolithic / Microservices / Serverless)
-2. Core Components (5-7 max)
-3. Data Storage Strategy (SQL/NoSQL/Cache)
-4. Scalability Approach (sharding, caching, load balancing)
-5. Bottlenecks & Trade-offs
+  Rules:
+  - Start from requirements, then architecture, then scaling and trade-offs.
+  - Keep it practical; avoid generic cloud buzzwords.
+  - Include only the most important numbers and bottlenecks.
 
-Draw simple ASCII diagram if helpful. Keep it SHORT!`;
+  Format exactly:
+  1. Functional and Non-Functional Requirements (short)
+  2. Capacity Assumptions (traffic, storage; rough order-of-magnitude)
+  3. High-Level Architecture and Core Components (max 7)
+  4. Data Model and Storage Strategy (SQL/NoSQL/Cache)
+  5. API and Data Flow (request path in brief)
+  6. Scalability and Reliability (partitioning, cache, queue, failover)
+  7. Bottlenecks and Trade-offs (top 3)
+  8. Optional ASCII diagram (small)
+
+  Keep it concise and reproducible in interview speech.`;
   }
 
   getBehavioralPrompt(question, resume = '', jobDesc = '', conversationHistory = []) {
@@ -226,22 +248,29 @@ Draw simple ASCII diagram if helpful. Keep it SHORT!`;
       context += `\n\nROLE REQUIREMENTS:\n${jobDesc}\nAlign their examples with these job requirements and competencies.`;
     }
     const conversationContext = this.getConversationContext(conversationHistory);
-    return `You are a behavioral interviewer coach. A candidate needs to answer this behavioral question.${context}${conversationContext}
-IMPORTANT: Your answer should follow STAR format and be repeatable in 2 minutes.
+    return `You are a behavioral interview coach. The candidate must give a confident, natural answer.${context}${conversationContext}
+Goal: Build a crisp STAR response aligned with resume achievements and target role needs.
 
 Question: "${question}"
 
-Format using STAR:
-S - Situation (Brief context)
-T - Task (What was your responsibility)
-A - Action (What YOU did specifically)
-R - Result (Outcome & metrics if possible)
+Rules:
+- Use first-person language (I did, I decided, I improved).
+- Prioritize one strong example over multiple weak examples.
+- Include measurable impact when possible.
+- Keep the answer tight enough for 90-120 seconds.
 
-Then add:
-- Why this shows key professional qualities (teamwork, problem-solving, leadership, communication, etc.)
-- Potential follow-up questions they might ask
+Format exactly:
+1. Best Example Choice (1 line: why this example fits the question)
+2. STAR Answer
+   S - Situation (brief)
+   T - Task (responsibility)
+   A - Actions (specific, high ownership)
+   R - Results (metrics + business/team impact)
+3. 30-second condensed version
+4. Why this maps to role requirements (3 bullets)
+5. Likely follow-up questions (3-5)
 
-Keep it SHORT and confident!`;
+Tone: confident, specific, no fluff.`;
   }
 }
 
