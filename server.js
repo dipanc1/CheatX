@@ -223,6 +223,7 @@ app.post('/api/classify', async (req, res) => {
 
 // Endpoint to transcribe audio using Groq Whisper
 app.post('/api/transcribe', async (req, res) => {
+  let filePath = null;
   try {
     const { audioBase64 } = req.body;
     if (!audioBase64) {
@@ -238,18 +239,23 @@ app.post('/api/transcribe', async (req, res) => {
     const tempDir = path.join(__dirname, 'temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
     
-    const filePath = path.join(tempDir, `audio_${Date.now()}.webm`);
+    filePath = path.join(tempDir, `audio_${Date.now()}.webm`);
     fs.writeFileSync(filePath, buffer);
 
     const transcript = await llmService.transcribeAudio(filePath);
-    
-    // Clean up temp file
-    fs.unlinkSync(filePath);
 
     return res.json({ transcript: transcript.trim() });
   } catch (error) {
     console.error('Error transcribing audio:', error);
     return res.status(500).json({ error: 'Transcription failed', details: error.message });
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (cleanupError) {
+        console.error('Error cleaning temp audio file:', cleanupError.message);
+      }
+    }
   }
 });
 

@@ -93,6 +93,11 @@ Respond with ONLY the category name.`;
     };
 
     const prompt = prompts[classifiedCategory] || prompts.coding;
+    if (DEBUG_HINTS) {
+      console.log('----- [LLM PROMPT START] -----');
+      console.log(prompt);
+      console.log('----- [LLM PROMPT END] -----');
+    }
 
     try {
       if (this.geminiModel) {
@@ -134,7 +139,7 @@ Respond with ONLY the category name.`;
     if (!conversationHistory || conversationHistory.length === 0) {
       return '';
     }
-    let context = '\n\n=== INTERVIEW CONTEXT (Previous Q&A) ===\n';
+    let context = '\n\n=== INTERVIEW CONTEXT (Most Recent Q&A) ===\n';
     conversationHistory.forEach((exchange, index) => {
       context += `Q${index + 1}: ${exchange.question}\nA${index + 1}: ${exchange.answer.substring(0, 200)}...\n\n`;
     });

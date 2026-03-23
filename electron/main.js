@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
 const isDev = require('electron-is-dev');
+const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${process.env.BACKEND_PORT || 5000}`;
 
 let mainWindow;
 
@@ -51,7 +52,7 @@ app.on('activate', () => {
 ipcMain.handle('get-hints', async (event, data) => {
   try {
     const { question, category, resume = '', jobDesc = '', company = '', role = '', sessionId = null, includeContext = true } = data;
-    const response = await fetch('http://localhost:5000/api/hints', {
+    const response = await fetch(`${BACKEND_URL}/api/hints`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, category, resume, jobDesc, company, role, sessionId, includeContext }),

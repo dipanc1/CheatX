@@ -4,6 +4,7 @@ import ContextUpload from './components/ContextUpload';
 import SessionHistory from './components/SessionHistory';
 import InterviewOverlay from './components/InterviewOverlay';
 import AudioService from './services/audioService';
+import { API_BASE_URL } from './config';
 
 function App() {
   const [resume, setResume] = useState('');
@@ -88,7 +89,7 @@ function App() {
       setInterviewLoading(true);
       setInterviewError('');
       
-      const response = await fetch('http://localhost:5000/api/classify', {
+      const response = await fetch(`${API_BASE_URL}/api/classify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question }),
@@ -138,6 +139,9 @@ function App() {
         // Store session ID
         if (response.sessionId) {
           interviewSessionIdRef.current = response.sessionId;
+        }
+        if (typeof response.historyCount === 'number') {
+          setHistoryCount(response.historyCount);
         }
 
         // Clean response
@@ -223,11 +227,13 @@ function App() {
   };
 
   const handleNewSession = () => {
-    setSessionId(null);
+    interviewSessionIdRef.current = null;
     setHistoryCount(0);
-    setQuestion('');
-    setHints(null);
-    setError('');
+    setInterviewQuestion('');
+    setInterviewCategory(null);
+    setInterviewHints(null);
+    setInterviewError('');
+    setInterviewQuestionCount(0);
   };
 
   return (

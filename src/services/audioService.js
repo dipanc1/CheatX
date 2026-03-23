@@ -5,6 +5,8 @@
  * 2. MediaRecorder + Backend Whisper API (Electron/Fallback)
  */
 
+import { API_BASE_URL } from '../config';
+
 class AudioService {
   constructor() {
     this.recognition = null;
@@ -260,7 +262,7 @@ class AudioService {
         const base64Audio = reader.result;
         
         try {
-          const response = await fetch('http://localhost:5000/api/transcribe', {
+          const response = await fetch(`${API_BASE_URL}/api/transcribe`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ audioBase64: base64Audio }),

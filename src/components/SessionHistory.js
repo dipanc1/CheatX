@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 
-function SessionHistory({ sessionId, isOpen, onClose }) {
+function SessionHistory({ isOpen, onClose }) {
   const [sessions, setSessions] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -18,7 +19,7 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('http://localhost:5000/api/sessions');
+      const response = await fetch(`${API_BASE_URL}/api/sessions`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -35,7 +36,7 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
 
   const loadAnalytics = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/analytics');
+      const response = await fetch(`${API_BASE_URL}/api/analytics`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -50,7 +51,7 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
   const deleteSession = async (id) => {
     if (!window.confirm('Delete this session? This cannot be undone.')) return;
     try {
-      await fetch(`http://localhost:5000/api/sessions/${id}`, { method: 'DELETE' });
+      await fetch(`${API_BASE_URL}/api/sessions/${id}`, { method: 'DELETE' });
       loadSessions();
     } catch (error) {
       console.error('Error deleting session:', error);
@@ -61,7 +62,7 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
     if (!window.confirm('⚠️ Clear ALL sessions? This cannot be undone.')) return;
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/sessions`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE_URL}/api/sessions`, { method: 'DELETE' });
       if (response.ok) {
         await loadSessions();
         await loadAnalytics();

@@ -51,9 +51,19 @@ npm start
 ```
 
 This will:
-1. Start React dev server on `http://localhost:3000`
-2. Start backend on `http://localhost:5000`
+1. Start backend on `http://localhost:5000`
+2. Start React dev server on `http://localhost:3000`
 3. Launch Electron app
+
+### Run Backend Only
+
+```bash
+npm run dev
+```
+
+This will:
+1. Start React dev server on `http://localhost:3000`
+2. Keep backend API running for local testing
 
 ### Build for Production
 
@@ -157,7 +167,7 @@ NODE_ENV=development
 curl http://localhost:5000/health
 
 # If not, manually start it:
-npm run backend
+npm run dev
 ```
 
 ### Gemini API errors
@@ -172,10 +182,10 @@ npm run backend
 
 ## Roadmap
 
-- [ ] Audio transcription (Whisper API)
+- [x] Audio transcription (Groq Whisper)
 - [ ] Real-time interview evaluation
 - [ ] Question bank with difficulty ratings
-- [ ] Mock interview mode (full round simulation)
+- [x] Mock interview mode (full round simulation)
 - [ ] Interview performance analytics
 - [ ] Multi-language support
 - [ ] Cloud sync for history
