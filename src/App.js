@@ -20,6 +20,7 @@ function App() {
   const [interviewError, setInterviewError] = useState('');
   const [historyCount, setHistoryCount] = useState(0);
   const [interviewQuestionCount, setInterviewQuestionCount] = useState(0); // Track questions answered in current interview
+  const [useContextHistory, setUseContextHistory] = useState(true); // Toggle for including previous Q&A context
   const audioServiceRef = useRef(null);
   const interviewSessionIdRef = useRef(null);
 
@@ -126,6 +127,7 @@ function App() {
         sessionId: interviewSessionIdRef.current || null,
         company: company || '',
         role: role || '',
+        includeContext: useContextHistory,
       };
 
       const response = await window.electron.getHints(hintData);
@@ -382,6 +384,8 @@ function App() {
         onNextQuestion={handleNextQuestion}
         onToggleRecording={handleToggleRecording}
         onEndInterview={handleEndInterview}
+        useContextHistory={useContextHistory}
+        onToggleContextHistory={() => setUseContextHistory(!useContextHistory)}
       />
 
     </div>

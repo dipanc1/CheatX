@@ -17,6 +17,8 @@ function InterviewOverlay({
   onNextQuestion,
   onToggleRecording,
   onEndInterview,
+  useContextHistory,
+  onToggleContextHistory,
 }) {
   const [minimized, setMinimized] = useState(false);
 
@@ -84,6 +86,25 @@ function InterviewOverlay({
           )}
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          {onToggleContextHistory && (
+            <button
+              onClick={onToggleContextHistory}
+              style={{
+                background: useContextHistory ? 'rgba(0, 255, 136, 0.2)' : 'rgba(255, 68, 68, 0.2)',
+                border: `1px solid ${useContextHistory ? '#00ff88' : '#ff4444'}`,
+                color: useContextHistory ? '#00ff88' : '#ff4444',
+                cursor: 'pointer',
+                fontSize: '12px',
+                padding: '4px 10px',
+                borderRadius: '3px',
+                fontWeight: '600',
+                title: useContextHistory ? 'Context: ON (previous Q&A included)' : 'Context: OFF (isolated questions)',
+              }}
+              title={useContextHistory ? 'Context: ON (previous Q&A included)' : 'Context: OFF (isolated questions)'}
+            >
+              {useContextHistory ? '🔗 Context' : '🚫 Context'}
+            </button>
+          )}
           <button
             onClick={() => setMinimized(!minimized)}
             style={{

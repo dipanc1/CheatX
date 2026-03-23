@@ -11,6 +11,7 @@ const QuestionClassifier = require('./src/utils/questionClassifier');
 
 const app = express();
 const PORT = process.env.BACKEND_PORT || 5000;
+const DEBUG_HINTS = process.env.DEBUG_HINTS === 'true';
 
 // Middleware
 app.use(cors());
@@ -19,9 +20,6 @@ app.use(express.json({ limit: '50mb' }));
 // Initialize services
 const llmService = new LLMService(process.env.GEMINI_API_KEY, process.env.GROQ_API_KEY);
 const db = new Database();
-
-// In-memory conversation history cache (for current session only)
-const conversationCache = new Map();
 
 // Helper function to generate mock hints for dev mode
 function getMockHints(question, category) {
@@ -115,7 +113,19 @@ public interface PaymentGateway {
 // Routes
 app.post('/api/hints', async (req, res) => {
   try {
-    let { question, category, resume = '', jobDesc = '', sessionId, company = '', role = '' } = req.body;
+    let { question, category, resume = '', jobDesc = '', sessionId, company = '', role = '', includeContext = true } = req.body;
+    const includePrevContext = includeContext !== false && includeContext !== 'false';
+
+    if (DEBUG_HINTS) {
+      console.log('[API] /api/hints', {
+        category,
+        includePrevContext,
+        hasResume: Boolean(resume),
+        hasJobDesc: Boolean(jobDesc),
+        hasSessionId: Boolean(sessionId),
+      });
+    }
+    
     if (!question || typeof question !== 'string') {
       return res.status(400).json({ error: 'Question must be a non-empty string' });
     }
@@ -137,6 +147,16 @@ app.post('/api/hints', async (req, res) => {
       answer: conv.answer
     }));
 
+    // Use only the previous question/answer (not full history)
+    const lastExchange = conversationHistory.length > 0 
+      ? [conversationHistory[conversationHistory.length - 1]] 
+      : [];
+    const historyToUse = includePrevContext ? lastExchange : [];
+
+    if (DEBUG_HINTS) {
+      console.log('[API] Context used:', historyToUse.length > 0 ? 'previous Q&A' : 'none');
+    }
+
     // Classify question if needed
     let classifiedCategory = category;
     if (!category || category === 'auto') {
@@ -152,7 +172,7 @@ app.post('/api/hints', async (req, res) => {
       };
     } else {
       // Generate hints using LLM with conversation context
-      hints = await llmService.generateHints(questionStr, classifiedCategory, resume, jobDesc, conversationHistory);
+      hints = await llmService.generateHints(questionStr, classifiedCategory, resume, jobDesc, historyToUse);
     }
 
     // Save to database

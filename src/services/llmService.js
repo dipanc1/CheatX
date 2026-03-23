@@ -1,5 +1,6 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Groq = require('groq-sdk');
+const DEBUG_HINTS = process.env.DEBUG_HINTS === 'true';
 
 class LLMService {
   constructor(geminiKey, groqKey) {
@@ -70,6 +71,15 @@ Respond with ONLY the category name.`;
   }
 
   async generateHints(question, category = 'auto', resume = '', jobDesc = '', conversationHistory = []) {
+    if (DEBUG_HINTS) {
+      console.log('[LLM] generateHints', {
+        category,
+        hasResume: Boolean(resume),
+        hasJobDesc: Boolean(jobDesc),
+        contextExchanges: conversationHistory.length,
+      });
+    }
+    
     let classifiedCategory = category;
     if (category === 'auto') {
       classifiedCategory = await this.classifyQuestion(question);
@@ -87,13 +97,17 @@ Respond with ONLY the category name.`;
     try {
       if (this.geminiModel) {
         const result = await this.geminiModel.generateContent(prompt);
+        const response = result.response.text();
+        if (DEBUG_HINTS) {
+          console.log('[LLM] Gemini success', { responseLength: response.length, classifiedCategory });
+        }
         return {
           classification: classifiedCategory,
-          response: result.response.text(),
+          response: response,
         };
       }
     } catch (error) {
-      console.warn('⚠️  Gemini generation failed, falling back to Groq:', error.message);
+      console.warn('Gemini generation failed, falling back to Groq:', error.message);
     }
 
     // Fallback to Groq
@@ -103,9 +117,13 @@ Respond with ONLY the category name.`;
         max_tokens: 2000,
         messages: [{ role: 'user', content: prompt }],
       });
+      const response = message.choices[0]?.message?.content || '';
+      if (DEBUG_HINTS) {
+        console.log('[LLM] Groq success', { responseLength: response.length, classifiedCategory });
+      }
       return {
         classification: classifiedCategory,
-        response: message.choices[0]?.message?.content || '',
+        response: response,
       };
     }
 
