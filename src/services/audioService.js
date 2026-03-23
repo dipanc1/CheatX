@@ -92,7 +92,6 @@ class AudioService {
       
       // If native fails with network/audio auth, try to fallback automatically
       if (event.error === 'network' || event.error === 'audio-capture') {
-        console.log('Switching to MediaRecorder fallback due to native API failure');
         this.useFallbackStt = true;
         this.startListening(); // Re-trigger with fallback
       } else if (this.onError) {
@@ -218,7 +217,6 @@ class AudioService {
 
       if (averageVolume > talkingThreshold) {
         if (!speakingDetected) {
-          console.log('🎤 Speech detected (Fallback VAD)');
           speakingDetected = true;
           this.isSpeaking = true;
           if (this.onTranscriptUpdate) {
@@ -233,7 +231,6 @@ class AudioService {
 
         // If silence duration > threshold, end chunk
         if (speakingDetected && silenceStart && (Date.now() - silenceStart > this.silenceThreshold)) {
-          console.log('🔇 Silence detected (Fallback VAD)');
           speakingDetected = false;
           this.isSpeaking = false;
           silenceStart = null;
@@ -271,7 +268,6 @@ class AudioService {
           
           const data = await response.json();
           if (data.transcript && data.transcript.trim()) {
-            console.log('📝 Transcribed via Fallback:', data.transcript);
             if (this.onSpeechEnd) {
               this.onSpeechEnd({
                 transcript: data.transcript,
@@ -279,7 +275,6 @@ class AudioService {
               });
             }
           } else {
-            console.log('Discarding empty audio chunk');
             if (this.onTranscriptUpdate) {
                this.onTranscriptUpdate({ transcript: "", isFinal: false });
             }
@@ -342,7 +337,6 @@ class AudioService {
     
     this.silenceTimer = setTimeout(() => {
       if (this.isSpeaking && this.finalTranscript.trim()) {
-        console.log('🔇 Silence detected - speech ended');
         this.isSpeaking = false;
         
         const finalText = (this.finalTranscript + this.currentTranscript).trim();
@@ -390,7 +384,6 @@ class AudioService {
   async requestMicrophonePermission() {
     try {
       this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log('✅ Microphone access granted');
       return true;
     } catch (error) {
       console.error('❌ Microphone access denied:', error);

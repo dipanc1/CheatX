@@ -23,7 +23,6 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
-      console.log('✅ Sessions loaded:', data);
       setSessions(data.sessions || []);
     } catch (error) {
       console.error('❌ Error loading sessions:', error);
@@ -41,7 +40,6 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
-      console.log('✅ Analytics loaded:', data);
       setAnalytics(data);
     } catch (error) {
       console.error('❌ Error loading analytics:', error);
@@ -56,6 +54,26 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
       loadSessions();
     } catch (error) {
       console.error('Error deleting session:', error);
+    }
+  };
+
+  const clearAllSessions = async () => {
+    if (!window.confirm('⚠️ Clear ALL sessions? This cannot be undone.')) return;
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:5000/api/sessions`, { method: 'DELETE' });
+      if (response.ok) {
+        await loadSessions();
+        await loadAnalytics();
+        setError('');
+      } else {
+        setError('Failed to clear sessions');
+      }
+    } catch (error) {
+      console.error('Error clearing all sessions:', error);
+      setError(`Failed: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -100,11 +118,23 @@ function SessionHistory({ sessionId, isOpen, onClose }) {
               color: '#00d4ff',
               fontSize: '18px',
               cursor: 'pointer',
-              title: 'Refresh'
             }}
             title="Refresh history"
           >
             🔄
+          </button>
+          <button
+            onClick={clearAllSessions}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#ff6666',
+              fontSize: '18px',
+              cursor: 'pointer',
+            }}
+            title="Clear ALL sessions"
+          >
+            🗑️
           </button>
           <button
             onClick={onClose}

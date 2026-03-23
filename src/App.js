@@ -50,7 +50,6 @@ function App() {
 
       // Handle when speech ends (silence detected)
       audioServiceRef.current.onSpeechEnd = async (data) => {
-        console.log('Speech ended:', data.transcript);
         const question = data.transcript;
         
         if (question.trim()) {

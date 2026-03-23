@@ -128,7 +128,6 @@ app.post('/api/hints', async (req, res) => {
     // Create or get session
     if (!sessionId) {
       sessionId = await db.createSession(company, role, resume, jobDesc);
-      console.log(`✨ New session created: ${sessionId}`);
     }
 
     // Load conversation history from database
@@ -147,7 +146,6 @@ app.post('/api/hints', async (req, res) => {
     // Use mock response in dev mode, real LLM otherwise
     let hints;
     if (process.env.NODE_ENV === 'development') {
-      console.log('🎭 Using mock response (dev mode)');
       hints = {
         classification: classifiedCategory,
         response: getMockHints(questionStr, classifiedCategory),
@@ -223,7 +221,6 @@ app.post('/api/transcribe', async (req, res) => {
     const filePath = path.join(tempDir, `audio_${Date.now()}.webm`);
     fs.writeFileSync(filePath, buffer);
 
-    console.log(`🎙️ Transcribing audio file: ${filePath}`);
     const transcript = await llmService.transcribeAudio(filePath);
     
     // Clean up temp file
@@ -308,6 +305,17 @@ app.delete('/api/sessions/:sessionId', async (req, res) => {
     return res.json({ message: 'Session deleted' });
   } catch (error) {
     console.error('Error deleting session:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Clear all sessions
+app.delete('/api/sessions', async (req, res) => {
+  try {
+    await db.clearAllSessions();
+    return res.json({ message: 'All sessions cleared' });
+  } catch (error) {
+    console.error('Error clearing all sessions:', error);
     return res.status(500).json({ error: error.message });
   }
 });

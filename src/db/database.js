@@ -8,7 +8,6 @@ class Database {
       if (err) {
         console.error('Database error:', err);
       } else {
-        console.log('📊 Database connected');
         this.initializeTables();
       }
     });
@@ -231,6 +230,25 @@ class Database {
           this.db.run(
             `DELETE FROM sessions WHERE id = ?`,
             [sessionId],
+            (err) => {
+              if (err) reject(err);
+              else resolve(true);
+            }
+          );
+        }
+      );
+    });
+  }
+
+  // Clear all sessions
+  clearAllSessions() {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `DELETE FROM conversations`,
+        (err) => {
+          if (err) return reject(err);
+          this.db.run(
+            `DELETE FROM sessions`,
             (err) => {
               if (err) reject(err);
               else resolve(true);

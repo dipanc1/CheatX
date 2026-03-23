@@ -199,6 +199,9 @@ Draw simple ASCII diagram if helpful. Keep it SHORT!`;
     if (resume) {
       context = `\n\nCANDIDATE RESUME:\n${resume}\nBuild answers from their specific achievements and background.`;
     }
+    if (jobDesc) {
+      context += `\n\nROLE REQUIREMENTS:\n${jobDesc}\nAlign their examples with these job requirements and competencies.`;
+    }
     const conversationContext = this.getConversationContext(conversationHistory);
     return `You are a behavioral interviewer coach. A candidate needs to answer this behavioral question.${context}${conversationContext}
 IMPORTANT: Your answer should follow STAR format and be repeatable in 2 minutes.
