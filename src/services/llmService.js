@@ -19,7 +19,7 @@ class LLMService {
     // Initialize Groq
     if (groqKey) {
       this.groqClient = new Groq({ apiKey: groqKey });
-      this.groqModel = 'meta-llama/llama-4-scout-17b-16e-instruct';
+      this.groqModel = 'llama-3.3-70b-versatile';
     }
   }
 

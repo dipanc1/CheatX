@@ -10,12 +10,11 @@ class QuestionClassifier {
       ['write code', 3], ['algorithm', 3], ['implement', 2], ['leetcode', 3],
       ['dynamic programming', 3], ['recursion', 2], ['binary search', 3],
       ['linked list', 3], ['hash map', 3], ['hash table', 3], ['heap', 2],
-      ['stack', 2], ['queue', 1], ['tree', 2], ['graph', 2], ['trie', 3],
-      ['sort', 2], ['search', 1], ['array', 2], ['string', 1],
-      ['two pointers', 3], ['sliding window', 3], ['backtracking', 3],
+      ['stack', 2], ['queue', 2], ['tree', 2], ['graph', 2], ['trie', 3],
+      ['sort', 2], ['two pointers', 3], ['sliding window', 3], ['backtracking', 3],
       ['greedy', 2], ['bfs', 3], ['dfs', 3], ['dp', 3],
-      ['time complexity', 3], ['space complexity', 3], ['optimize', 2],
-      ['brute force', 2], ['function', 1], ['return', 1],
+      ['time complexity', 3], ['space complexity', 3], ['code', 1],
+      ['brute force', 2], ['bug fix', 2], ['debug', 2],
     ];
 
     const lldKeywords = [
